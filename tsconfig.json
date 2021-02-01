@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "types": [],
+        "lib": [
+            "es6",
+            "dom"
+        ],
+        "module": "commonjs"
+    }
+}
