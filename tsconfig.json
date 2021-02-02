@@ -1,10 +1,12 @@
 {
-    "compilerOptions": {
-        "types": [],
-        "lib": [
-            "es6",
-            "dom"
-        ],
-        "module": "commonjs"
-    }
+  "compilerOptions": {
+    "types": [],
+    "lib": [
+      "es6",
+      "dom"
+    ],
+    "strict": true,
+    "esModuleInterop": true,
+    "module": "commonjs"
+  }
 }
