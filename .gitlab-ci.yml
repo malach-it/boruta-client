@@ -1,0 +1,16 @@
+stages:
+  - test
+
+.node-task:
+  image: node:16
+  before_script:
+    - npm ci
+  cache:
+    paths:
+      - node_modules/
+
+test:
+  stage: test
+  extends: .node-task
+  script:
+    - npm test
