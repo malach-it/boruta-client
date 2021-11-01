@@ -1,7 +1,7 @@
 {
   "name": "boruta-client",
   "version": "1.0.0",
-  "description": "A Typescript OpenId client ",
+  "description": "A Typescript OpenId client",
   "main": "index.js",
   "directories": {
     "test": "test"
