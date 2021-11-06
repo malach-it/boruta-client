@@ -11,6 +11,10 @@ export type ImplicitParams = {
   redirectUri: string
 }
 
+export type ImplicitExtraParams = {
+  prompt: string
+}
+
 export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
   return class Implicit {
     oauth: BorutaOauth
@@ -21,15 +25,35 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
       this.oauth = oauth
       this.clientId = clientId
       this.redirectUri = redirectUri
+
+
     }
 
     get loginUrl(): string {
-      const url = new URL(oauth.host)
-      url.searchParams.append('client_id',  this.clientId)
-      url.searchParams.append('redirect_uri', this.redirectUri)
-      url.searchParams.append('response_type', 'token')
+      return this.buildLoginUrl().toString()
+    }
 
-      return url.toString()
+    buildLoginUrl(extraParams: Partial<ImplicitExtraParams> = {}): URL {
+      const url = new URL(oauth.host)
+
+      // TODO state & nonce
+      const queryParams = {
+        'client_id':  this.clientId,
+        'redirect_uri': this.redirectUri,
+        'response_type': 'token',
+        ...extraParams
+      }
+
+      Object.entries(queryParams).forEach(([param, value]) => {
+        if (!value) return
+
+        url.searchParams.append(
+          param,
+          value
+        )
+      })
+
+      return url
     }
 
     parseLocation(): ImplicitSuccess {
@@ -37,19 +61,36 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
       const urlSearchParams = new URLSearchParams(hash)
 
       const access_token = urlSearchParams.get('access_token') || ''
-      const id_token = urlSearchParams.get('id_token') || undefined
+      const id_token = urlSearchParams.get('id_token')
       const expires_in = parseInt(urlSearchParams.get('expires_in') || '0')
-      const state = urlSearchParams.get('state') || undefined
+      const state = urlSearchParams.get('state')
 
-      const result: ImplicitSuccess = {
+      const response: ImplicitSuccess = {
         access_token,
         expires_in
       }
 
-      if (id_token) result.id_token = id_token
-      if (state) result.state = state
+      if (id_token) response.id_token = id_token
+      if (state) response.state = state
 
-      return result
+      return response
+    }
+
+    slientRefresh(): void {
+      const iframe = document.createElement('iframe')
+      iframe.style.display = 'none'
+      iframe.src = this.buildLoginUrl({ prompt: 'none' }).toString()
+      iframe.onload = () => {
+        const response = this.parseLocation()
+
+        window.parent.postMessage(JSON.stringify(response), "*")
+      }
+
+      document.body.appendChild(iframe)
+    }
+
+    handleIFrameMessage(message: MessageEvent) {
+      console.log(message)
     }
   }
 }

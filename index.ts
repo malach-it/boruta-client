@@ -1,3 +1,1 @@
-import { say } from "./src/hello-word"
-
-console.log(say())
+export * from './src/boruta-oauth'
