@@ -56,8 +56,9 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
       return url
     }
 
-    parseLocation(): ImplicitSuccess {
-      const hash = window.location.hash.substring(1)
+    // TODO manage oauth error
+    parseLocation(location: Location): ImplicitSuccess {
+      const hash = location.hash.substring(1)
       const urlSearchParams = new URLSearchParams(hash)
 
       const access_token = urlSearchParams.get('access_token') || ''
@@ -76,15 +77,10 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
       return response
     }
 
-    slientRefresh(): void {
+    silentRefresh(): void {
       const iframe = document.createElement('iframe')
       iframe.style.display = 'none'
       iframe.src = this.buildLoginUrl({ prompt: 'none' }).toString()
-      iframe.onload = () => {
-        const response = this.parseLocation()
-
-        window.parent.postMessage(JSON.stringify(response), "*")
-      }
 
       document.body.appendChild(iframe)
     }

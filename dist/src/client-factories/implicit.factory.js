@@ -22,8 +22,9 @@ function createImplicitClient({ oauth, window }) {
             });
             return url;
         }
-        parseLocation() {
-            const hash = window.location.hash.substring(1);
+        // TODO manage oauth error
+        parseLocation(location) {
+            const hash = location.hash.substring(1);
             const urlSearchParams = new URLSearchParams(hash);
             const access_token = urlSearchParams.get('access_token') || '';
             const id_token = urlSearchParams.get('id_token');
@@ -39,14 +40,10 @@ function createImplicitClient({ oauth, window }) {
                 response.state = state;
             return response;
         }
-        slientRefresh() {
+        silentRefresh() {
             const iframe = document.createElement('iframe');
             iframe.style.display = 'none';
             iframe.src = this.buildLoginUrl({ prompt: 'none' }).toString();
-            iframe.onload = () => {
-                const response = this.parseLocation();
-                window.parent.postMessage(JSON.stringify(response), "*");
-            };
             document.body.appendChild(iframe);
         }
         handleIFrameMessage(message) {

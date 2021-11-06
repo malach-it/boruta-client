@@ -10,6 +10,7 @@ export type BorutaOauthParams = {
 export class BorutaOauth {
   window: Window
   host: string
+  // TODO add authorizeUrl
   tokenPath: string
 
   constructor ({ host, tokenPath, window }: BorutaOauthParams) {

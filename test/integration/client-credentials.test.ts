@@ -81,7 +81,7 @@ describe('BorutaOauth', () => {
         })
 
         it('returns a null object', () => {
-          expect(client.parseLocation()).to.deep.eq({
+          expect(client.parseLocation(window.location)).to.deep.eq({
             access_token: '',
             expires_in: 0
           })
@@ -100,7 +100,7 @@ describe('BorutaOauth', () => {
         })
 
         it('returns an implicit response', () => {
-          expect(client.parseLocation()).to.deep.eq({
+          expect(client.parseLocation(window.location)).to.deep.eq({
             access_token,
             expires_in,
             state
@@ -121,7 +121,7 @@ describe('BorutaOauth', () => {
         })
 
         it('returns an implicit response', () => {
-          expect(client.parseLocation()).to.deep.eq({
+          expect(client.parseLocation(window.location)).to.deep.eq({
             access_token,
             expires_in,
             id_token,
