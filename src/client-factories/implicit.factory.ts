@@ -24,7 +24,7 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
     clientId: string
     redirectUri: string
     scope: string
-    private refresh?: number
+    refresh?: number
     silentRefreshCallback?: (response: ImplicitSuccess) => void
 
     constructor({ clientId, redirectUri, scope, silentRefresh, silentRefreshCallback }: ImplicitParams) {
@@ -47,31 +47,6 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
       return this.buildLoginUrl().toString()
     }
 
-    buildLoginUrl(extraParams: Partial<ImplicitExtraParams> = {}): URL {
-      const url = new URL(oauth.host)
-
-      // TODO state & nonce
-      const queryParams = {
-        'client_id':  this.clientId,
-        'redirect_uri': this.redirectUri,
-        'scope': this.scope,
-        'response_type': 'token',
-        ...extraParams
-      }
-
-      Object.entries(queryParams).forEach(([param, value]) => {
-        if (!value) return
-
-        url.searchParams.append(
-          param,
-          value
-        )
-      })
-
-      return url
-    }
-
-    // TODO manage oauth error
     parseLocation(location: Location): Promise<ImplicitSuccess> {
       const hash = location.hash.substring(1)
       const urlSearchParams = new URLSearchParams(hash)
@@ -108,22 +83,36 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
 
       if (window.frameElement) {
         // TODO have an environment variable for wildcard and set app host
-        window.parent.postMessage(JSON.stringify(response), '*')
+        window.parent.postMessage(JSON.stringify({
+          type: 'boruta_response',
+          response
+        }), '*')
       }
 
       return response
     }
 
     silentRefresh(): void {
-      const iframe = document.createElement('iframe')
+      const iframe = window.document.createElement('iframe')
       iframe.style.display = 'none'
       iframe.src = this.buildLoginUrl({ prompt: 'none' }).toString()
 
-      document.body.appendChild(iframe)
+      window.document.body.appendChild(iframe)
     }
 
     handleSilentRefresh(message: MessageEvent): void {
-      const response = JSON.parse(message.data) || {}
+      let response
+      try {
+        const data = JSON.parse(message.data) || {}
+
+        if (data.type === 'boruta_response') {
+          response = data.response
+        } else {
+          throw 'Invalid message type.'
+        }
+      } catch (error) {
+        throw new Error('Message is not a valid Boruta OAuth response.')
+      }
 
       if (response.expires_in) {
         if (this.refresh) {
@@ -137,9 +126,35 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
         this.refresh = refresh
       }
 
-      if (this.silentRefreshCallback) {
+      if (response && this.silentRefreshCallback) {
         this.silentRefreshCallback(response)
       }
+    }
+
+    private buildLoginUrl(extraParams: Partial<ImplicitExtraParams> = {}): URL {
+      // TODO throw an error in case of misconfiguration (host, authorizePath)
+      const url = new URL(oauth.host)
+      url.pathname = oauth.authorizePath || ''
+
+      // TODO state & nonce
+      const queryParams = {
+        'client_id':  this.clientId,
+        'redirect_uri': this.redirectUri,
+        'scope': this.scope,
+        'response_type': 'token',
+        ...extraParams
+      }
+
+      Object.entries(queryParams).forEach(([param, value]) => {
+        if (!value) return
+
+        url.searchParams.append(
+          param,
+          value
+        )
+      })
+
+      return url
     }
   }
 }

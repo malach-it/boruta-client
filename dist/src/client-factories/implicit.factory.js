@@ -29,18 +29,6 @@ function createImplicitClient({ oauth, window }) {
         get loginUrl() {
             return this.buildLoginUrl().toString();
         }
-        buildLoginUrl(extraParams = {}) {
-            const url = new URL(oauth.host);
-            // TODO state & nonce
-            const queryParams = Object.assign({ 'client_id': this.clientId, 'redirect_uri': this.redirectUri, 'scope': this.scope, 'response_type': 'token' }, extraParams);
-            Object.entries(queryParams).forEach(([param, value]) => {
-                if (!value)
-                    return;
-                url.searchParams.append(param, value);
-            });
-            return url;
-        }
-        // TODO manage oauth error
         parseLocation(location) {
             const hash = location.hash.substring(1);
             const urlSearchParams = new URLSearchParams(hash);
@@ -72,19 +60,34 @@ function createImplicitClient({ oauth, window }) {
                 const response = yield this.parseLocation(window.location);
                 if (window.frameElement) {
                     // TODO have an environment variable for wildcard and set app host
-                    window.parent.postMessage(JSON.stringify(response), '*');
+                    window.parent.postMessage(JSON.stringify({
+                        type: 'boruta_response',
+                        response
+                    }), '*');
                 }
                 return response;
             });
         }
         silentRefresh() {
-            const iframe = document.createElement('iframe');
+            const iframe = window.document.createElement('iframe');
             iframe.style.display = 'none';
             iframe.src = this.buildLoginUrl({ prompt: 'none' }).toString();
-            document.body.appendChild(iframe);
+            window.document.body.appendChild(iframe);
         }
         handleSilentRefresh(message) {
-            const response = JSON.parse(message.data) || {};
+            let response;
+            try {
+                const data = JSON.parse(message.data) || {};
+                if (data.type === 'boruta_response') {
+                    response = data.response;
+                }
+                else {
+                    throw 'Invalid message type.';
+                }
+            }
+            catch (error) {
+                throw new Error('Message is not a valid Boruta OAuth response.');
+            }
             if (response.expires_in) {
                 if (this.refresh) {
                     clearTimeout(this.refresh);
@@ -94,9 +97,22 @@ function createImplicitClient({ oauth, window }) {
                 }, response.expires_in * 1000 - 10000);
                 this.refresh = refresh;
             }
-            if (this.silentRefreshCallback) {
+            if (response && this.silentRefreshCallback) {
                 this.silentRefreshCallback(response);
             }
+        }
+        buildLoginUrl(extraParams = {}) {
+            // TODO throw an error in case of misconfiguration (host, authorizePath)
+            const url = new URL(oauth.host);
+            url.pathname = oauth.authorizePath || '';
+            // TODO state & nonce
+            const queryParams = Object.assign({ 'client_id': this.clientId, 'redirect_uri': this.redirectUri, 'scope': this.scope, 'response_type': 'token' }, extraParams);
+            Object.entries(queryParams).forEach(([param, value]) => {
+                if (!value)
+                    return;
+                url.searchParams.append(param, value);
+            });
+            return url;
         }
     };
 }

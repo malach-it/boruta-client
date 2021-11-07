@@ -10,7 +10,8 @@ function createClientCredentialsClient({ oauth }) {
             this.clientSecret = clientSecret;
         }
         getToken() {
-            const { oauth: { api, tokenPath } } = this;
+            // TODO throw an error in case of misconfiguration (tokenPath)
+            const { oauth: { api, tokenPath = '' } } = this;
             const body = {
                 grant_type: 'client_credentials',
                 client_id: this.clientId,

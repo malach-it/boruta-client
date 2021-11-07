@@ -4,19 +4,21 @@ import { createClientCredentialsClient, createImplicitClient } from './client-fa
 export type BorutaOauthParams = {
   window: Window
   host: string
-  tokenPath: string
+  tokenPath?: string
+  authorizePath?: string
 }
 
 export class BorutaOauth {
   window: Window
   host: string
-  // TODO add authorizeUrl
-  tokenPath: string
+  authorizePath?: string
+  tokenPath?: string
 
-  constructor ({ host, tokenPath, window }: BorutaOauthParams) {
+  constructor ({ host, authorizePath, tokenPath, window }: BorutaOauthParams) {
     this.window = window
     this.host = host
     this.tokenPath = tokenPath
+    this.authorizePath = authorizePath
   }
 
   get api() {
