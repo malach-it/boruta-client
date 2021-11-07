@@ -57,15 +57,25 @@ function createImplicitClient({ oauth, window }) {
         }
         callback() {
             return __awaiter(this, void 0, void 0, function* () {
-                const response = yield this.parseLocation(window.location);
-                if (window.frameElement) {
-                    // TODO have an environment variable for wildcard and set app host
-                    window.parent.postMessage(JSON.stringify({
-                        type: 'boruta_response',
-                        response
-                    }), '*');
-                }
-                return response;
+                return this.parseLocation(window.location).then((response) => {
+                    if (window.frameElement) {
+                        // TODO have an environment variable for wildcard and set app host
+                        window.parent.postMessage(JSON.stringify({
+                            type: 'boruta_response',
+                            response
+                        }), '*');
+                    }
+                    return response;
+                }).catch((error) => {
+                    if (window.frameElement) {
+                        // TODO have an environment variable for wildcard and set app host
+                        window.parent.postMessage(JSON.stringify({
+                            type: 'boruta_error',
+                            error
+                        }), '*');
+                    }
+                    throw error;
+                });
             });
         }
         silentRefresh() {
@@ -80,6 +90,9 @@ function createImplicitClient({ oauth, window }) {
                 const data = JSON.parse(message.data) || {};
                 if (data.type === 'boruta_response') {
                     response = data.response;
+                }
+                else if (data.type === 'boruta_error') {
+                    response = data.error;
                 }
                 else {
                     throw 'Invalid message type.';

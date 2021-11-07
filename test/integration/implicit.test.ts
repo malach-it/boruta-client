@@ -168,8 +168,13 @@ describe('BorutaOauth', () => {
         })
 
         it('returns an error', async () => {
-          const response = stubInterface<OauthError>()
+          const response = new OauthError({ error: 'error', error_description: 'Error description.' })
           client.parseLocation = stub().returns(Promise.reject(response))
+          const postMessage = stub()
+          Object.defineProperty(window.parent, 'postMessage', {
+            writable: true,
+            value: postMessage
+          })
 
           try {
             await client.callback()
@@ -177,6 +182,10 @@ describe('BorutaOauth', () => {
             assert(false)
           } catch(error) {
             expect(error).to.deep.eq(response)
+            expect(postMessage.lastCall.args).to.deep.eq([JSON.stringify({
+              type: 'boruta_error',
+              error: response
+            }), '*'])
           }
         })
 
@@ -274,6 +283,32 @@ describe('BorutaOauth', () => {
         })
       })
 
+      describe('with a boruta_error message', () => {
+        const error = new OauthError({
+          error: 'error',
+          error_description: 'Error description.'
+        })
+        const message = stubInterface<MessageEvent>()
+        beforeEach(() => {
+          Object.defineProperty(message, 'data', {
+            writable: true,
+            value: JSON.stringify({
+              type: 'boruta_error',
+              error
+            })
+          })
+        })
+
+        it('calls silentRefreshCallback', () => {
+          client.handleSilentRefresh(message)
+
+          expect(silentRefreshCallback.callCount).to.eq(1)
+          expect(silentRefreshCallback.lastCall.args[0]).to.deep.eq({
+            error: 'error',
+            error_description: 'Error description.'
+          })
+        })
+      })
       describe('with a boruta_response message', () => {
         const response: ImplicitSuccess = {
           access_token: 'access_token',

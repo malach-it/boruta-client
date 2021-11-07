@@ -11,7 +11,7 @@ export type ImplicitParams = {
   redirectUri: string
   scope?: string
   silentRefresh?: boolean
-  silentRefreshCallback?: (response: ImplicitSuccess) => void
+  silentRefreshCallback?: (response: ImplicitSuccess | OauthError) => void
 }
 
 export type ImplicitExtraParams = {
@@ -79,17 +79,27 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
     }
 
     async callback() {
-      const response = await this.parseLocation(window.location)
+      return this.parseLocation(window.location).then((response) => {
+        if (window.frameElement) {
+          // TODO have an environment variable for wildcard and set app host
+          window.parent.postMessage(JSON.stringify({
+            type: 'boruta_response',
+            response
+          }), '*')
+        }
 
-      if (window.frameElement) {
-        // TODO have an environment variable for wildcard and set app host
-        window.parent.postMessage(JSON.stringify({
-          type: 'boruta_response',
-          response
-        }), '*')
-      }
+        return response
+      }).catch((error) => {
+        if (window.frameElement) {
+          // TODO have an environment variable for wildcard and set app host
+          window.parent.postMessage(JSON.stringify({
+            type: 'boruta_error',
+            error
+          }), '*')
+        }
 
-      return response
+        throw error
+      })
     }
 
     silentRefresh(): void {
@@ -107,6 +117,8 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
 
         if (data.type === 'boruta_response') {
           response = data.response
+        } else if (data.type === 'boruta_error') {
+          response = data.error
         } else {
           throw 'Invalid message type.'
         }
