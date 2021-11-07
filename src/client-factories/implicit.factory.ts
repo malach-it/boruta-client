@@ -9,6 +9,7 @@ export type ImplicitFactoryParams =  {
 export type ImplicitParams = {
   clientId: string
   redirectUri: string
+  scope?: string
 }
 
 export type ImplicitExtraParams = {
@@ -20,13 +21,13 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
     oauth: BorutaOauth
     clientId: string
     redirectUri: string
+    scope: string
 
-    constructor({ clientId, redirectUri }: ImplicitParams) {
+    constructor({ clientId, redirectUri, scope }: ImplicitParams) {
       this.oauth = oauth
       this.clientId = clientId
       this.redirectUri = redirectUri
-
-
+      this.scope = scope || ''
     }
 
     get loginUrl(): string {
@@ -40,6 +41,7 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
       const queryParams = {
         'client_id':  this.clientId,
         'redirect_uri': this.redirectUri,
+        'scope': this.scope,
         'response_type': 'token',
         ...extraParams
       }

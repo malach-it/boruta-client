@@ -3,10 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createImplicitClient = void 0;
 function createImplicitClient({ oauth, window }) {
     return class Implicit {
-        constructor({ clientId, redirectUri }) {
+        constructor({ clientId, redirectUri, scope }) {
             this.oauth = oauth;
             this.clientId = clientId;
             this.redirectUri = redirectUri;
+            this.scope = scope || '';
         }
         get loginUrl() {
             return this.buildLoginUrl().toString();
@@ -14,7 +15,7 @@ function createImplicitClient({ oauth, window }) {
         buildLoginUrl(extraParams = {}) {
             const url = new URL(oauth.host);
             // TODO state & nonce
-            const queryParams = Object.assign({ 'client_id': this.clientId, 'redirect_uri': this.redirectUri, 'response_type': 'token' }, extraParams);
+            const queryParams = Object.assign({ 'client_id': this.clientId, 'redirect_uri': this.redirectUri, 'scope': this.scope, 'response_type': 'token' }, extraParams);
             Object.entries(queryParams).forEach(([param, value]) => {
                 if (!value)
                     return;
