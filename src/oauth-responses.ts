@@ -1,12 +1,13 @@
 type OauthErrorParams = {
   error: string
   error_description: string
-  status: number
+  status?: number
 }
+
 export class OauthError extends Error {
   error: string
   error_description: string
-  status: number
+  status?: number
 
   constructor({ status, error, error_description }: OauthErrorParams) {
     super()
