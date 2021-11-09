@@ -1,12 +1,13 @@
 type OauthErrorParams = {
   error: string
   error_description: string
-  status: number
+  status?: number
 }
+
 export class OauthError extends Error {
   error: string
   error_description: string
-  status: number
+  status?: number
 
   constructor({ status, error, error_description }: OauthErrorParams) {
     super()
@@ -24,6 +25,7 @@ export class OauthError extends Error {
 export interface ImplicitSuccess {
   access_token: string
   id_token?: string
+  // TODO expires_at Date
   expires_in: number
   state?: string
 }

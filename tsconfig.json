@@ -2,12 +2,17 @@
   "compilerOptions": {
     "types": [],
     "lib": [
-      "es6",
+      "es2017",
       "dom"
     ],
     "target": "es6",
     "strict": true,
     "esModuleInterop": true,
-    "module": "commonjs"
-  }
+    "module": "commonjs",
+    "skipLibCheck": true,
+    "outDir": "dist"
+  },
+  "exclude": [
+    "test"
+  ]
 }
