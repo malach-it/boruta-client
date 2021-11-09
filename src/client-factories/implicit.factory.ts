@@ -25,7 +25,7 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
     redirectUri: string
     scope: string
     refresh?: number
-    silentRefreshCallback?: (response: ImplicitSuccess) => void
+    silentRefreshCallback?: (response: ImplicitSuccess | OauthError) => void
 
     constructor({ clientId, redirectUri, scope, silentRefresh, silentRefreshCallback }: ImplicitParams) {
       this.oauth = oauth
@@ -81,21 +81,19 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
     async callback() {
       return this.parseLocation(window.location).then((response) => {
         if (window.frameElement) {
-          // TODO have an environment variable for wildcard and set app host
           window.parent.postMessage(JSON.stringify({
             type: 'boruta_response',
             response
-          }), '*')
+          }), window.location.host)
         }
 
         return response
-      }).catch((error) => {
+      }).catch(error => {
         if (window.frameElement) {
-          // TODO have an environment variable for wildcard and set app host
           window.parent.postMessage(JSON.stringify({
             type: 'boruta_error',
             error
-          }), '*')
+          }), window.location.host)
         }
 
         throw error

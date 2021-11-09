@@ -171,9 +171,14 @@ describe('BorutaOauth', () => {
           const response = new OauthError({ error: 'error', error_description: 'Error description.' })
           client.parseLocation = stub().returns(Promise.reject(response))
           const postMessage = stub()
+          const host = "test.host"
           Object.defineProperty(window.parent, 'postMessage', {
             writable: true,
             value: postMessage
+          })
+          Object.defineProperty(window.location, 'host', {
+            writable: true,
+            value: host
           })
 
           try {
@@ -185,15 +190,20 @@ describe('BorutaOauth', () => {
             expect(postMessage.lastCall.args).to.deep.eq([JSON.stringify({
               type: 'boruta_error',
               error: response
-            }), '*'])
+            }), host])
           }
         })
 
         it('sends response to parent', async () => {
           const postMessage = stub()
+          const host = 'test.host'
           Object.defineProperty(window.parent, 'postMessage', {
             writable: true,
             value: postMessage
+          })
+          Object.defineProperty(window.location, 'host', {
+            writable: true,
+            value: host
           })
           const response = stubInterface<ImplicitSuccess>()
           client.parseLocation = stub().returns(Promise.resolve(response))
@@ -203,7 +213,7 @@ describe('BorutaOauth', () => {
           expect(postMessage.lastCall.args).to.deep.eq([JSON.stringify({
             type: 'boruta_response',
             response
-          }), '*'])
+          }), host])
         })
       })
 
@@ -309,6 +319,7 @@ describe('BorutaOauth', () => {
           })
         })
       })
+
       describe('with a boruta_response message', () => {
         const response: ImplicitSuccess = {
           access_token: 'access_token',
