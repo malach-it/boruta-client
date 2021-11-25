@@ -176,7 +176,7 @@ describe('BorutaOauth', () => {
             writable: true,
             value: postMessage
           })
-          Object.defineProperty(window.location, 'host', {
+          Object.defineProperty(window.location, 'origin', {
             writable: true,
             value: host
           })
@@ -201,7 +201,7 @@ describe('BorutaOauth', () => {
             writable: true,
             value: postMessage
           })
-          Object.defineProperty(window.location, 'host', {
+          Object.defineProperty(window.location, 'origin', {
             writable: true,
             value: host
           })

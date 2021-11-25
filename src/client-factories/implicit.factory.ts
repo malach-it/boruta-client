@@ -80,7 +80,7 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
           window.parent.postMessage(JSON.stringify({
             type: 'boruta_response',
             response
-          }), window.location.host)
+          }), window.location.origin)
         }
 
         return response
@@ -89,7 +89,7 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
           window.parent.postMessage(JSON.stringify({
             type: 'boruta_error',
             error
-          }), window.location.host)
+          }), window.location.origin)
         }
 
         throw error
