@@ -21,9 +21,6 @@ function createImplicitClient({ oauth, window }) {
             this.silentRefreshCallback = silentRefreshCallback;
             if (silentRefresh) {
                 window.addEventListener('message', this.handleSilentRefresh.bind(this), false);
-                if (!window.frameElement) {
-                    this.silentRefresh();
-                }
             }
         }
         get loginUrl() {
@@ -59,20 +56,18 @@ function createImplicitClient({ oauth, window }) {
             return __awaiter(this, void 0, void 0, function* () {
                 return this.parseLocation(window.location).then((response) => {
                     if (window.frameElement) {
-                        // TODO have an environment variable for wildcard and set app host
                         window.parent.postMessage(JSON.stringify({
                             type: 'boruta_response',
                             response
-                        }), '*');
+                        }), window.location.host);
                     }
                     return response;
-                }).catch((error) => {
+                }).catch(error => {
                     if (window.frameElement) {
-                        // TODO have an environment variable for wildcard and set app host
                         window.parent.postMessage(JSON.stringify({
                             type: 'boruta_error',
                             error
-                        }), '*');
+                        }), window.location.host);
                     }
                     throw error;
                 });

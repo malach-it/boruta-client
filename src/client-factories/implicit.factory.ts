@@ -36,10 +36,6 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
 
       if (silentRefresh) {
         window.addEventListener('message', this.handleSilentRefresh.bind(this), false)
-
-        if (!window.frameElement) {
-          this.silentRefresh()
-        }
       }
     }
 
