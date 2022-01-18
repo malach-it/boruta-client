@@ -114,10 +114,10 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
         } else if (data.type === 'boruta_error') {
           response = data.error
         } else {
-          throw 'Invalid message type.'
+          return
         }
       } catch (error) {
-        throw new Error('Message is not a valid Boruta OAuth response.')
+        return
       }
 
       if (response.expires_in) {

@@ -263,13 +263,7 @@ describe('BorutaOauth', () => {
         const message = stubInterface<MessageEvent>()
 
         it('returns an error', () => {
-          try {
-            client.handleSilentRefresh(message)
-
-            assert(false)
-          } catch(error) {
-            expect(error.message).to.eq('Message is not a valid Boruta OAuth response.')
-          }
+          expect(client.handleSilentRefresh(message)).to.eq(undefined)
         })
       })
 
@@ -283,13 +277,7 @@ describe('BorutaOauth', () => {
         })
 
         it('returns an error', () => {
-          try {
-            client.handleSilentRefresh(message)
-
-            assert(false)
-          } catch(error) {
-            expect(error.message).to.eq('Message is not a valid Boruta OAuth response.')
-          }
+          expect(client.handleSilentRefresh(message)).to.eq(undefined)
         })
       })
 
