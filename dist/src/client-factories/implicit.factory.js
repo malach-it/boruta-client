@@ -90,11 +90,11 @@ function createImplicitClient({ oauth, window }) {
                     response = data.error;
                 }
                 else {
-                    throw 'Invalid message type.';
+                    return;
                 }
             }
             catch (error) {
-                throw new Error('Message is not a valid Boruta OAuth response.');
+                return;
             }
             if (response.expires_in) {
                 if (this.refresh) {
