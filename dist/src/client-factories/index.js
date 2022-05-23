@@ -12,3 +12,4 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./client-credentials.factory"), exports);
 __exportStar(require("./implicit.factory"), exports);
+__exportStar(require("./revoke.factory"), exports);
