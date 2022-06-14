@@ -1,6 +1,8 @@
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, ImplicitSuccess } from "../oauth-responses"
 
+const NONCE_KEY = 'boruta_nonce'
+
 export type ImplicitFactoryParams =  {
   oauth: BorutaOauth
   window: Window
@@ -42,6 +44,19 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
       }
     }
 
+    get isOpenid() {
+      return this.responseType == 'id_token token' && this.scope.match(/openid/)
+    }
+
+    get nonce() {
+      const current = window.localStorage.getItem(NONCE_KEY)
+      if (current) return current
+
+      const nonce = (Math.random() + 1).toString(36).substring(4)
+      window.localStorage.setItem(NONCE_KEY, nonce)
+      return nonce
+    }
+
     get loginUrl(): string {
       return this.buildLoginUrl().toString()
     }
@@ -61,7 +76,7 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
           expires_in
         }
 
-        if (id_token) response.id_token = id_token
+        if (id_token) response.id_token = id_token // TODO verify nonce
         if (state) response.state = state
 
         return Promise.resolve(response)
@@ -145,12 +160,20 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
       const url = new URL(oauth.host)
       url.pathname = oauth.authorizePath || ''
 
-      // TODO state & nonce
+      let nonceParam
+      if (this.isOpenid) {
+        nonceParam = { 'nonce': this.nonce }
+      } else {
+        nonceParam = {}
+      }
+
+      // TODO state
       const queryParams = {
         'client_id':  this.clientId,
         'redirect_uri': this.redirectUri,
         'scope': this.scope,
         'response_type': this.responseType,
+        ...nonceParam,
         ...extraParams
       }
 

@@ -14,6 +14,12 @@ describe('BorutaOauth', () => {
   const authorizePath = '/authorize'
   const window = stubInterface<Window>()
   const oauth = new BorutaOauth({ host, authorizePath, tokenPath, window })
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', {
+      value: stubInterface<Storage>(),
+      writable: true
+    })
+  })
   afterEach(() => {
     nock.cleanAll()
   })
@@ -111,6 +117,26 @@ describe('BorutaOauth', () => {
       })
     })
 
+    describe('.nonce', () => {
+      const clientId = 'clientId'
+      const redirectUri = 'http://front.host/callback'
+      const client = new oauth.Implicit({ clientId, redirectUri })
+
+      it('returns string from localStorage', () => {
+        // @ts-ignore
+        window.localStorage.getItem.returns('test')
+
+        expect(client.nonce).to.eq('test')
+      })
+
+      it('returns random string', () => {
+        // @ts-ignore
+        window.localStorage.getItem.returns('')
+
+        expect(client.nonce.length).to.eq(8)
+      })
+    })
+
     describe('.loginUrl', () => {
       const clientId = 'clientId'
       const redirectUri = 'http://front.host/callback'
@@ -118,18 +144,19 @@ describe('BorutaOauth', () => {
       const client = new oauth.Implicit({ clientId, redirectUri, scope })
 
       it('returns login URL', () => {
-        expect(client.loginUrl).to.eq(
-          'http://test.host/authorize?client_id=clientId&redirect_uri=http%3A%2F%2Ffront.host%2Fcallback&scope=scope&response_type=token'
+        expect(client.loginUrl).to.match(
+          /http:\/\/test\.host\/authorize\?client_id=clientId&redirect_uri=http%3A%2F%2Ffront.host%2Fcallback&scope=scope&response_type=token/
         )
       })
 
       describe("with 'id_token token' response type", () => {
         const responseType = 'id_token token'
-        const responseTypeClient = new oauth.Implicit({ clientId, redirectUri, scope, responseType })
+        const openidScope = 'openid'
+        const responseTypeClient = new oauth.Implicit({ clientId, redirectUri, scope: openidScope, responseType })
 
         it('returns login URL', () => {
-          expect(responseTypeClient.loginUrl).to.eq(
-            'http://test.host/authorize?client_id=clientId&redirect_uri=http%3A%2F%2Ffront.host%2Fcallback&scope=scope&response_type=id_token+token'
+          expect(responseTypeClient.loginUrl).to.match(
+          /http:\/\/test\.host\/authorize\?client_id=clientId&redirect_uri=http%3A%2F%2Ffront.host%2Fcallback&scope=openid&response_type=id_token\+token&nonce=(.+)/
           )
         })
       })

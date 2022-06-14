@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createImplicitClient = void 0;
 const oauth_responses_1 = require("../oauth-responses");
+const NONCE_KEY = 'boruta_nonce';
 function createImplicitClient({ oauth, window }) {
     return class Implicit {
         constructor({ clientId, redirectUri, scope, silentRefresh, silentRefreshCallback, responseType }) {
@@ -23,6 +24,17 @@ function createImplicitClient({ oauth, window }) {
             if (silentRefresh) {
                 window.addEventListener('message', this.handleSilentRefresh.bind(this), false);
             }
+        }
+        get isOpenid() {
+            return this.responseType == 'id_token token' && this.scope.match(/openid/);
+        }
+        get nonce() {
+            const current = window.localStorage.getItem(NONCE_KEY);
+            if (current)
+                return current;
+            const nonce = (Math.random() + 1).toString(36).substring(4);
+            window.localStorage.setItem(NONCE_KEY, nonce);
+            return nonce;
         }
         get loginUrl() {
             return this.buildLoginUrl().toString();
@@ -40,7 +52,7 @@ function createImplicitClient({ oauth, window }) {
                     expires_in
                 };
                 if (id_token)
-                    response.id_token = id_token;
+                    response.id_token = id_token; // TODO verify nonce
                 if (state)
                     response.state = state;
                 return Promise.resolve(response);
@@ -114,8 +126,15 @@ function createImplicitClient({ oauth, window }) {
             // TODO throw an error in case of misconfiguration (host, authorizePath)
             const url = new URL(oauth.host);
             url.pathname = oauth.authorizePath || '';
-            // TODO state & nonce
-            const queryParams = Object.assign({ 'client_id': this.clientId, 'redirect_uri': this.redirectUri, 'scope': this.scope, 'response_type': this.responseType }, extraParams);
+            let nonceParam;
+            if (this.isOpenid) {
+                nonceParam = { 'nonce': this.nonce };
+            }
+            else {
+                nonceParam = {};
+            }
+            // TODO state
+            const queryParams = Object.assign(Object.assign({ 'client_id': this.clientId, 'redirect_uri': this.redirectUri, 'scope': this.scope, 'response_type': this.responseType }, nonceParam), extraParams);
             Object.entries(queryParams).forEach(([param, value]) => {
                 if (!value)
                     return;
