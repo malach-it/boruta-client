@@ -13,12 +13,13 @@ exports.createImplicitClient = void 0;
 const oauth_responses_1 = require("../oauth-responses");
 function createImplicitClient({ oauth, window }) {
     return class Implicit {
-        constructor({ clientId, redirectUri, scope, silentRefresh, silentRefreshCallback }) {
+        constructor({ clientId, redirectUri, scope, silentRefresh, silentRefreshCallback, responseType }) {
             this.oauth = oauth;
             this.clientId = clientId;
             this.redirectUri = redirectUri;
             this.scope = scope || '';
             this.silentRefreshCallback = silentRefreshCallback;
+            this.responseType = responseType || 'token';
             if (silentRefresh) {
                 window.addEventListener('message', this.handleSilentRefresh.bind(this), false);
             }
@@ -114,7 +115,7 @@ function createImplicitClient({ oauth, window }) {
             const url = new URL(oauth.host);
             url.pathname = oauth.authorizePath || '';
             // TODO state & nonce
-            const queryParams = Object.assign({ 'client_id': this.clientId, 'redirect_uri': this.redirectUri, 'scope': this.scope, 'response_type': 'token' }, extraParams);
+            const queryParams = Object.assign({ 'client_id': this.clientId, 'redirect_uri': this.redirectUri, 'scope': this.scope, 'response_type': this.responseType }, extraParams);
             Object.entries(queryParams).forEach(([param, value]) => {
                 if (!value)
                     return;

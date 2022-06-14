@@ -111,7 +111,7 @@ describe('BorutaOauth', () => {
       })
     })
 
-    describe('loginUrl', () => {
+    describe('.loginUrl', () => {
       const clientId = 'clientId'
       const redirectUri = 'http://front.host/callback'
       const scope = 'scope'
@@ -121,6 +121,17 @@ describe('BorutaOauth', () => {
         expect(client.loginUrl).to.eq(
           'http://test.host/authorize?client_id=clientId&redirect_uri=http%3A%2F%2Ffront.host%2Fcallback&scope=scope&response_type=token'
         )
+      })
+
+      describe("with 'id_token token' response type", () => {
+        const responseType = 'id_token token'
+        const responseTypeClient = new oauth.Implicit({ clientId, redirectUri, scope, responseType })
+
+        it('returns login URL', () => {
+          expect(responseTypeClient.loginUrl).to.eq(
+            'http://test.host/authorize?client_id=clientId&redirect_uri=http%3A%2F%2Ffront.host%2Fcallback&scope=scope&response_type=id_token+token'
+          )
+        })
       })
     })
 

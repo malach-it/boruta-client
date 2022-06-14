@@ -12,6 +12,7 @@ export type ImplicitParams = {
   scope?: string
   silentRefresh?: boolean
   silentRefreshCallback?: (response: ImplicitSuccess | OauthError) => void
+  responseType?: 'token' | 'id_token token'
 }
 
 export type ImplicitExtraParams = {
@@ -22,17 +23,19 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
   return class Implicit {
     oauth: BorutaOauth
     clientId: string
+    responseType: string
     redirectUri: string
     scope: string
     refresh?: number
     silentRefreshCallback?: (response: ImplicitSuccess | OauthError) => void
 
-    constructor({ clientId, redirectUri, scope, silentRefresh, silentRefreshCallback }: ImplicitParams) {
+    constructor({ clientId, redirectUri, scope, silentRefresh, silentRefreshCallback, responseType }: ImplicitParams) {
       this.oauth = oauth
       this.clientId = clientId
       this.redirectUri = redirectUri
       this.scope = scope || ''
       this.silentRefreshCallback = silentRefreshCallback
+      this.responseType = responseType || 'token'
 
       if (silentRefresh) {
         window.addEventListener('message', this.handleSilentRefresh.bind(this), false)
@@ -147,7 +150,7 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
         'client_id':  this.clientId,
         'redirect_uri': this.redirectUri,
         'scope': this.scope,
-        'response_type': 'token',
+        'response_type': this.responseType,
         ...extraParams
       }
 
