@@ -1,7 +1,8 @@
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, ImplicitSuccess } from "../oauth-responses"
 
-const NONCE_KEY = 'boruta_nonce'
+export const NONCE_KEY = 'boruta_nonce'
+export const STATE_KEY = 'boruta_state'
 
 export type ImplicitFactoryParams =  {
   oauth: BorutaOauth
@@ -19,6 +20,22 @@ export type ImplicitParams = {
 
 export type ImplicitExtraParams = {
   prompt: string
+}
+
+export class StateError extends Error {
+  error: string
+  error_description: string
+
+  constructor() {
+    super()
+
+    this.error = 'invalid_state'
+    this.error_description = 'State does not match with the original given in request.'
+  }
+
+  get message() {
+    return this.error_description
+  }
 }
 
 export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
@@ -46,6 +63,15 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
 
     get isOpenid() {
       return this.responseType == 'id_token token' && this.scope.match(/openid/)
+    }
+
+    get state() {
+      const current = window.localStorage.getItem(STATE_KEY)
+      if (current) return current
+
+      const state = (Math.random() + 1).toString(36).substring(4)
+      window.localStorage.setItem(STATE_KEY, state)
+      return state
     }
 
     get nonce() {
@@ -77,7 +103,14 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
         }
 
         if (id_token) response.id_token = id_token // TODO verify nonce
-        if (state) response.state = state
+        if (state) {
+          response.state = state
+        } else {
+          return Promise.reject(new StateError())
+        }
+        if (state !== this.state) {
+          return Promise.reject(new StateError())
+        }
 
         return Promise.resolve(response)
       }
@@ -167,12 +200,12 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
         nonceParam = {}
       }
 
-      // TODO state
       const queryParams = {
         'client_id':  this.clientId,
         'redirect_uri': this.redirectUri,
         'scope': this.scope,
         'response_type': this.responseType,
+        'state': this.state,
         ...nonceParam,
         ...extraParams
       }

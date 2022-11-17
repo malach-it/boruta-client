@@ -2,23 +2,25 @@ import "mocha"
 import chai, { assert, expect }  from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import nock from 'nock'
-import { stubInterface, stubObject } from 'ts-sinon'
+import { stubInterface } from 'ts-sinon'
 import { stub } from 'sinon'
 import { BorutaOauth } from '../../src/boruta-oauth'
 import { OauthError, ImplicitSuccess } from "../../src/oauth-responses"
+import { NONCE_KEY, STATE_KEY } from '../../src/client-factories/implicit.factory'
 chai.use(chaiAsPromised)
+
+const window = stubInterface<Window>()
+Object.defineProperty(window, 'localStorage', {
+  value: stubInterface<Storage>(),
+  writable: true
+})
 
 describe('BorutaOauth', () => {
   const host = 'http://test.host'
   const tokenPath = '/token'
   const authorizePath = '/authorize'
-  const window = stubInterface<Window>()
   const oauth = new BorutaOauth({ host, authorizePath, tokenPath, window })
   beforeEach(() => {
-    Object.defineProperty(window, 'localStorage', {
-      value: stubInterface<Storage>(),
-      writable: true
-    })
   })
   afterEach(() => {
     nock.cleanAll()
@@ -41,7 +43,7 @@ describe('BorutaOauth', () => {
 
         it('returns an error', async () => {
           try {
-            const response = await client.parseLocation(window.location)
+            await client.parseLocation(window.location)
 
             assert(false)
           } catch(error) {
@@ -53,7 +55,7 @@ describe('BorutaOauth', () => {
       describe('location with oauth error response', () => {
         const error = 'bad_request'
         const error_description = 'Error description'
-        const state = 'state'
+        const state = client.state
         beforeEach(() => {
           Object.defineProperty(window.location, 'hash', {
             writable: true,
@@ -62,10 +64,36 @@ describe('BorutaOauth', () => {
         })
 
         it('returns an error', async () => {
+          // @ts-ignore
+          window.localStorage.getItem.withArgs(STATE_KEY).returns('state')
           try {
-            const response = await client.parseLocation(window.location)
+            await client.parseLocation(window.location)
+
+            assert(false)
           } catch (error) {
             expect(error.message).to.eq(error_description)
+          }
+        })
+      })
+
+      describe('location with invalid state', () => {
+        const access_token = 'access_token'
+        const expires_in = 3600
+        const state = client.state
+        beforeEach(() => {
+          Object.defineProperty(window.location, 'hash', {
+            writable: true,
+            value: `#access_token=${access_token}&expires_in=${expires_in}&state=${state}`
+          })
+        })
+
+        it('returns an error', async () => {
+          try {
+            await client.parseLocation(window.location)
+
+            assert(false)
+          } catch (error) {
+            expect(error.message).to.eq('State does not match with the original given in request.')
           }
         })
       })
@@ -96,8 +124,10 @@ describe('BorutaOauth', () => {
         const access_token = 'access_token'
         const id_token = 'id_token'
         const expires_in = 3600
-        const state = 'state'
+        let state = 'state'
         beforeEach(() => {
+          // @ts-ignore
+          window.localStorage.getItem.withArgs(STATE_KEY).returns(state)
           Object.defineProperty(window.location, 'hash', {
             writable: true,
             value: `#access_token=${access_token}&id_token=${id_token}&expires_in=${expires_in}&state=${state}`
@@ -124,16 +154,36 @@ describe('BorutaOauth', () => {
 
       it('returns string from localStorage', () => {
         // @ts-ignore
-        window.localStorage.getItem.returns('test')
+        window.localStorage.getItem.withArgs(NONCE_KEY).returns('nonce')
 
-        expect(client.nonce).to.eq('test')
+        expect(client.nonce).to.eq('nonce')
       })
 
       it('returns random string', () => {
         // @ts-ignore
-        window.localStorage.getItem.returns('')
+        window.localStorage.getItem.withArgs(NONCE_KEY).returns('')
 
         expect(client.nonce.length).to.eq(8)
+      })
+    })
+
+    describe('.state', () => {
+      const clientId = 'clientId'
+      const redirectUri = 'http://front.host/callback'
+      const client = new oauth.Implicit({ clientId, redirectUri })
+
+      it('returns string from localStorage', () => {
+        // @ts-ignore
+        window.localStorage.getItem.withArgs(STATE_KEY).returns('state')
+
+        expect(client.state).to.eq('state')
+      })
+
+      it('returns random string', () => {
+        // @ts-ignore
+        window.localStorage.getItem.withArgs(STATE_KEY).returns('')
+
+        expect(client.state.length).to.eq(8)
       })
     })
 
@@ -156,7 +206,7 @@ describe('BorutaOauth', () => {
 
         it('returns login URL', () => {
           expect(responseTypeClient.loginUrl).to.match(
-          /http:\/\/test\.host\/authorize\?client_id=clientId&redirect_uri=http%3A%2F%2Ffront.host%2Fcallback&scope=openid&response_type=id_token\+token&nonce=(.+)/
+          /http:\/\/test\.host\/authorize\?client_id=clientId&redirect_uri=http%3A%2F%2Ffront.host%2Fcallback&scope=openid&response_type=id_token\+token&state=(\w+)&nonce=(\w+)/
           )
         })
       })
@@ -185,8 +235,8 @@ describe('BorutaOauth', () => {
         client.silentRefresh()
 
         expect(appendChild.calledOnce).to.eq(true)
-        expect(iframe.src).to.eq(
-          'http://test.host/authorize?client_id=clientId&redirect_uri=http%3A%2F%2Ffront.host%2Fcallback&scope=scope&response_type=token&prompt=none'
+        expect(iframe.src).to.match(
+          /http:\/\/test.host\/authorize\?client_id=clientId&redirect_uri=http%3A%2F%2Ffront.host%2Fcallback&scope=scope&response_type=token&state=(\w+)&prompt=none/
         )
       })
     })

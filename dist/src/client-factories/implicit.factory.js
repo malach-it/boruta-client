@@ -9,9 +9,21 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createImplicitClient = void 0;
+exports.createImplicitClient = exports.StateError = exports.STATE_KEY = exports.NONCE_KEY = void 0;
 const oauth_responses_1 = require("../oauth-responses");
-const NONCE_KEY = 'boruta_nonce';
+exports.NONCE_KEY = 'boruta_nonce';
+exports.STATE_KEY = 'boruta_state';
+class StateError extends Error {
+    constructor() {
+        super();
+        this.error = 'invalid_state';
+        this.error_description = 'State does not match with the original given in request.';
+    }
+    get message() {
+        return this.error_description;
+    }
+}
+exports.StateError = StateError;
 function createImplicitClient({ oauth, window }) {
     return class Implicit {
         constructor({ clientId, redirectUri, scope, silentRefresh, silentRefreshCallback, responseType }) {
@@ -28,12 +40,20 @@ function createImplicitClient({ oauth, window }) {
         get isOpenid() {
             return this.responseType == 'id_token token' && this.scope.match(/openid/);
         }
+        get state() {
+            const current = window.localStorage.getItem(exports.STATE_KEY);
+            if (current)
+                return current;
+            const state = (Math.random() + 1).toString(36).substring(4);
+            window.localStorage.setItem(exports.STATE_KEY, state);
+            return state;
+        }
         get nonce() {
-            const current = window.localStorage.getItem(NONCE_KEY);
+            const current = window.localStorage.getItem(exports.NONCE_KEY);
             if (current)
                 return current;
             const nonce = (Math.random() + 1).toString(36).substring(4);
-            window.localStorage.setItem(NONCE_KEY, nonce);
+            window.localStorage.setItem(exports.NONCE_KEY, nonce);
             return nonce;
         }
         get loginUrl() {
@@ -53,8 +73,15 @@ function createImplicitClient({ oauth, window }) {
                 };
                 if (id_token)
                     response.id_token = id_token; // TODO verify nonce
-                if (state)
+                if (state) {
                     response.state = state;
+                }
+                else {
+                    return Promise.reject(new StateError());
+                }
+                if (state !== this.state) {
+                    return Promise.reject(new StateError());
+                }
                 return Promise.resolve(response);
             }
             const error = urlSearchParams.get('error') || 'unknown_error';
@@ -133,8 +160,7 @@ function createImplicitClient({ oauth, window }) {
             else {
                 nonceParam = {};
             }
-            // TODO state
-            const queryParams = Object.assign(Object.assign({ 'client_id': this.clientId, 'redirect_uri': this.redirectUri, 'scope': this.scope, 'response_type': this.responseType }, nonceParam), extraParams);
+            const queryParams = Object.assign(Object.assign({ 'client_id': this.clientId, 'redirect_uri': this.redirectUri, 'scope': this.scope, 'response_type': this.responseType, 'state': this.state }, nonceParam), extraParams);
             Object.entries(queryParams).forEach(([param, value]) => {
                 if (!value)
                     return;
