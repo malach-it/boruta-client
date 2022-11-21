@@ -36,7 +36,7 @@ const oauth = new BorutaOauth({
   tokenPath: '/oauth/token'
 })
 
-const client = oauth.ClientCredentials({
+const client = new oauth.ClientCredentials({
   clientId: 'shinyClientId',
   clientSecret: 'shinyClientSecret'
 })
