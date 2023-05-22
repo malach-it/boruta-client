@@ -44,6 +44,10 @@ const client = new oauth.ClientCredentials({
 client.getToken().then(console.log)
 ```
 
+## Code of Conduct
+
+This product community follows the code of conduct available [here](https://io.malach.it/code-of-conduct.html)
+
 ## License
 
 This code is released under the [MIT](LICENSE.md) license.
