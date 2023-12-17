@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { createClientCredentialsClient, createImplicitClient, createRevokeClient } from './client-factories'
+import { createPreauthorizedCodeClient, createClientCredentialsClient, createImplicitClient, createRevokeClient } from './client-factories'
 
 export type BorutaOauthParams = {
   window: Window
@@ -32,6 +32,10 @@ export class BorutaOauth {
 
   get ClientCredentials() {
     return createClientCredentialsClient({ oauth: this })
+  }
+
+  get PreauthorizedCode() {
+    return createPreauthorizedCodeClient({ oauth: this, window: this.window })
   }
 
   get Implicit() {

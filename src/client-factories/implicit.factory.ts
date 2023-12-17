@@ -62,7 +62,7 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
     }
 
     get isOpenid() {
-      return this.responseType == 'id_token token' && this.scope.match(/openid/)
+      return this.responseType.match(/id_token/) && this.scope.match(/openid/)
     }
 
     get state() {
