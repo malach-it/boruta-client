@@ -98,7 +98,7 @@ export function createPreauthorizedCodeClient({ oauth, window }: PreauthorizedCo
       return this.parseLocation(window.location)
     }
 
-    private buildLoginUrl(extraParams: Partial<PreauthorizedCodeExtraParams> = {}): URL {
+    buildLoginUrl(extraParams: Partial<PreauthorizedCodeExtraParams> = {}): URL {
       // TODO throw an error in case of misconfiguration (host, authorizePath)
       const url = new URL(oauth.host)
       url.pathname = oauth.authorizePath || ''
