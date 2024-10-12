@@ -45,7 +45,7 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
     responseType: string
     redirectUri: string
     scope: string
-    refresh?: number
+    refresh?: ReturnType<typeof setTimeout>
     silentRefreshCallback?: (response: ImplicitSuccess | OauthError) => void
 
     constructor({ clientId, redirectUri, scope, silentRefresh, silentRefreshCallback, responseType }: ImplicitParams) {
@@ -215,7 +215,7 @@ export function createImplicitClient({ oauth, window }: ImplicitFactoryParams) {
 
         url.searchParams.append(
           param,
-          value
+          <string>value
         )
       })
 

@@ -1,9 +1,11 @@
 import "mocha"
-import chai, { assert, expect }  from 'chai'
+import chai  from 'chai'
+const { assert, expect } = chai
 import chaiAsPromised from 'chai-as-promised'
 import nock from 'nock'
 import { stubInterface } from 'ts-sinon'
-import { stub } from 'sinon'
+import sinon from 'sinon'
+const { stub } = sinon
 import { BorutaOauth } from '../../src/boruta-oauth'
 import { OauthError, ImplicitSuccess } from "../../src/oauth-responses"
 import { NONCE_KEY, STATE_KEY } from '../../src/client-factories/implicit.factory'

@@ -1,8 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createRevokeClient = void 0;
-const oauth_responses_1 = require("../oauth-responses");
-function createRevokeClient({ oauth, window }) {
+import { OauthError } from "../oauth-responses";
+export function createRevokeClient({ oauth, window }) {
     return class Revoke {
         constructor({ clientId, clientSecret }) {
             this.oauth = oauth;
@@ -23,9 +20,8 @@ function createRevokeClient({ oauth, window }) {
             return oauth.api.post(revokePath, data)
                 .then(() => { })
                 .catch(({ status, response }) => {
-                throw new oauth_responses_1.OauthError(Object.assign({ status }, response.data));
+                throw new OauthError(Object.assign({ status }, response.data));
             });
         }
     };
 }
-exports.createRevokeClient = createRevokeClient;

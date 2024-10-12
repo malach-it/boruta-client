@@ -1,5 +1,11 @@
 import axios from 'axios'
-import { createPreauthorizedCodeClient, createClientCredentialsClient, createImplicitClient, createRevokeClient } from './client-factories'
+import {
+  createPreauthorizedCodeClient,
+  createClientCredentialsClient,
+  createImplicitClient,
+  createRevokeClient,
+  createSiopv2Client
+} from './client-factories'
 
 export type BorutaOauthParams = {
   window: Window
@@ -7,6 +13,7 @@ export type BorutaOauthParams = {
   tokenPath?: string
   authorizePath?: string
   revokePath?: string
+  jwksPath?: string
 }
 
 export class BorutaOauth {
@@ -15,13 +22,15 @@ export class BorutaOauth {
   authorizePath?: string
   tokenPath?: string
   revokePath?: string
+  jwksPath?: string
 
-  constructor ({ host, authorizePath, tokenPath, revokePath, window }: BorutaOauthParams) {
+  constructor ({ host, authorizePath, tokenPath, revokePath, jwksPath, window }: BorutaOauthParams) {
     this.window = window
     this.host = host
     this.tokenPath = tokenPath
     this.authorizePath = authorizePath
     this.revokePath = revokePath
+    this.jwksPath = jwksPath
   }
 
   get api() {
@@ -44,5 +53,9 @@ export class BorutaOauth {
 
   get Revoke() {
     return createRevokeClient({ oauth: this, window: this.window })
+  }
+
+  get Siopv2() {
+    return createSiopv2Client({ oauth: this, window: this.window })
   }
 }

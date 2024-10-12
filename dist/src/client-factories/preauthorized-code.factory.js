@@ -1,4 +1,3 @@
-"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,9 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createPreauthorizedCodeClient = void 0;
-const oauth_responses_1 = require("../oauth-responses");
+import { OauthError } from "../oauth-responses";
 const STATE_KEY = 'boruta_state';
 class StateError extends Error {
     constructor() {
@@ -22,7 +19,7 @@ class StateError extends Error {
         return this.error_description;
     }
 }
-function createPreauthorizedCodeClient({ oauth, window }) {
+export function createPreauthorizedCodeClient({ oauth, window }) {
     return class PreauthorizedCode {
         constructor({ clientId, redirectUri, clientSecret, scope }) {
             this.responseType = 'urn:ietf:params:oauth:response-type:pre-authorized_code';
@@ -53,7 +50,7 @@ function createPreauthorizedCodeClient({ oauth, window }) {
             }
             const error = urlSearchParams.get('error') || 'unknown_error';
             const error_description = urlSearchParams.get('error_description') || 'Could not be able to parse location.';
-            const response = new oauth_responses_1.OauthError({
+            const response = new OauthError({
                 error,
                 error_description
             });
@@ -91,9 +88,8 @@ function createPreauthorizedCodeClient({ oauth, window }) {
             return api.post(tokenPath, body).then(({ data }) => {
                 return data;
             }).catch(({ status, response }) => {
-                throw new oauth_responses_1.OauthError(Object.assign({ status }, response.data));
+                throw new OauthError(Object.assign({ status }, response.data));
             });
         }
     };
 }
-exports.createPreauthorizedCodeClient = createPreauthorizedCodeClient;

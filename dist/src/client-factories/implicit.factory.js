@@ -1,4 +1,3 @@
-"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,12 +7,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createImplicitClient = exports.StateError = exports.STATE_KEY = exports.NONCE_KEY = void 0;
-const oauth_responses_1 = require("../oauth-responses");
-exports.NONCE_KEY = 'boruta_nonce';
-exports.STATE_KEY = 'boruta_state';
-class StateError extends Error {
+import { OauthError } from "../oauth-responses";
+export const NONCE_KEY = 'boruta_nonce';
+export const STATE_KEY = 'boruta_state';
+export class StateError extends Error {
     constructor() {
         super();
         this.error = 'invalid_state';
@@ -23,8 +20,7 @@ class StateError extends Error {
         return this.error_description;
     }
 }
-exports.StateError = StateError;
-function createImplicitClient({ oauth, window }) {
+export function createImplicitClient({ oauth, window }) {
     return class Implicit {
         constructor({ clientId, redirectUri, scope, silentRefresh, silentRefreshCallback, responseType }) {
             this.oauth = oauth;
@@ -41,19 +37,19 @@ function createImplicitClient({ oauth, window }) {
             return this.responseType.match(/id_token/) && this.scope.match(/openid/);
         }
         get state() {
-            const current = window.localStorage.getItem(exports.STATE_KEY);
+            const current = window.localStorage.getItem(STATE_KEY);
             if (current)
                 return current;
             const state = (Math.random() + 1).toString(36).substring(4);
-            window.localStorage.setItem(exports.STATE_KEY, state);
+            window.localStorage.setItem(STATE_KEY, state);
             return state;
         }
         get nonce() {
-            const current = window.localStorage.getItem(exports.NONCE_KEY);
+            const current = window.localStorage.getItem(NONCE_KEY);
             if (current)
                 return current;
             const nonce = (Math.random() + 1).toString(36).substring(4);
-            window.localStorage.setItem(exports.NONCE_KEY, nonce);
+            window.localStorage.setItem(NONCE_KEY, nonce);
             return nonce;
         }
         get loginUrl() {
@@ -86,7 +82,7 @@ function createImplicitClient({ oauth, window }) {
             }
             const error = urlSearchParams.get('error') || 'unknown_error';
             const error_description = urlSearchParams.get('error_description') || 'Could not be able to parse location.';
-            const response = new oauth_responses_1.OauthError({
+            const response = new OauthError({
                 error,
                 error_description
             });
@@ -170,4 +166,3 @@ function createImplicitClient({ oauth, window }) {
         }
     };
 }
-exports.createImplicitClient = createImplicitClient;

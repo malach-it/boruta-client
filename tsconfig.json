@@ -1,18 +1,22 @@
 {
   "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Node",
     "types": [],
     "lib": [
       "es2017",
       "dom"
     ],
     "target": "es6",
-    "strict": true,
+    "strict": false,
     "esModuleInterop": true,
-    "module": "commonjs",
     "skipLibCheck": true,
     "outDir": "dist"
   },
   "exclude": [
     "test"
-  ]
+  ],
+  "ts-node": {
+    "esm": true
+  }
 }

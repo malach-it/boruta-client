@@ -1,8 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createClientCredentialsClient = void 0;
-const oauth_responses_1 = require("../oauth-responses");
-function createClientCredentialsClient({ oauth }) {
+import { OauthError } from "../oauth-responses";
+export function createClientCredentialsClient({ oauth }) {
     return class ClientCredentials {
         constructor({ clientId, clientSecret }) {
             this.oauth = oauth;
@@ -20,9 +17,8 @@ function createClientCredentialsClient({ oauth }) {
             return api.post(tokenPath, body).then(({ data }) => {
                 return data;
             }).catch(({ status, response }) => {
-                throw new oauth_responses_1.OauthError(Object.assign({ status }, response.data));
+                throw new OauthError(Object.assign({ status }, response.data));
             });
         }
     };
 }
-exports.createClientCredentialsClient = createClientCredentialsClient;

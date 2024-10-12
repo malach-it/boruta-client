@@ -50,3 +50,12 @@ export interface TokenSuccess {
   state?: string
 }
 
+export interface Siopv2Success {
+  id_token: string
+  client_id: string
+  redirect_uri: string
+  request: string
+  response_mode: string
+  response_type: string
+  scope?: string
+}

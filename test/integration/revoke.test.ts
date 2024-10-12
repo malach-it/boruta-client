@@ -1,5 +1,6 @@
 import "mocha"
-import chai, { expect }  from 'chai'
+import chai  from 'chai'
+const { assert, expect } = chai
 import chaiAsPromised from 'chai-as-promised'
 import nock from 'nock'
 import { stubInterface } from 'ts-sinon'
