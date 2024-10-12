@@ -30,7 +30,19 @@ export interface ImplicitSuccess {
   state?: string
 }
 
+export interface PreauthorizedCodeSuccess {
+  credentialOffer: object
+}
+
 export interface ClientCredentialsSuccess {
+  token_type: string
+  access_token: string
+  expires_in: number
+  refresh_token?: string
+  state?: string
+}
+
+export interface TokenSuccess {
   token_type: string
   access_token: string
   expires_in: number

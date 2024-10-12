@@ -38,7 +38,7 @@ function createImplicitClient({ oauth, window }) {
             }
         }
         get isOpenid() {
-            return this.responseType == 'id_token token' && this.scope.match(/openid/);
+            return this.responseType.match(/id_token/) && this.scope.match(/openid/);
         }
         get state() {
             const current = window.localStorage.getItem(exports.STATE_KEY);

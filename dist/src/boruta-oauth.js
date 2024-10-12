@@ -22,6 +22,9 @@ class BorutaOauth {
     get ClientCredentials() {
         return client_factories_1.createClientCredentialsClient({ oauth: this });
     }
+    get PreauthorizedCode() {
+        return client_factories_1.createPreauthorizedCodeClient({ oauth: this, window: this.window });
+    }
     get Implicit() {
         return client_factories_1.createImplicitClient({ oauth: this, window: this.window });
     }
