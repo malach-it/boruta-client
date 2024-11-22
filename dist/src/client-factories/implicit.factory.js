@@ -8,8 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { OauthError } from "../oauth-responses";
-export const NONCE_KEY = 'boruta_nonce';
-export const STATE_KEY = 'boruta_state';
+import { STATE_KEY, NONCE_KEY } from '../constants';
 export class StateError extends Error {
     constructor() {
         super();

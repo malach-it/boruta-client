@@ -1,5 +1,6 @@
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, Siopv2Success } from "../oauth-responses"
+import { PUBLIC_KEY_STORAGE_KEY, PRIVATE_KEY_STORAGE_KEY, STATE_KEY, NONCE_KEY } from '../constants'
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { SignJWT, exportJWK, exportPKCS8, importJWK, generateKeyPair } from "jose";
 
@@ -9,10 +10,11 @@ export type Siopv2FactoryParams =  {
 }
 
 export type Siopv2Params =  {
+  clientId: string
+  redirectUri: string
+  scope?: string
+  responseType?: string
 }
-
-const PUBLIC_KEY_STORAGE_KEY = 'wallet_public_key'
-const PRIVATE_KEY_STORAGE_KEY = 'wallet_private_key'
 
 export function createSiopv2Client({ oauth, window }: Siopv2FactoryParams) {
   return class Siopv2 {
@@ -20,9 +22,18 @@ export function createSiopv2Client({ oauth, window }: Siopv2FactoryParams) {
     publicKey?: any
     privateKey?: any
     did?: any
+    clientId: string
+    redirectUri: string
+    scope: string
+    responseType: string
 
-    constructor() {
+    constructor({ clientId, redirectUri, responseType, scope }: Siopv2Params) {
       this.oauth = oauth
+
+      this.clientId = clientId
+      this.redirectUri = redirectUri
+      this.scope = scope || ''
+      this.responseType = responseType || 'code'
     }
 
     async parseSiopv2Response(location: Location): Promise<Siopv2Success> {
@@ -95,6 +106,55 @@ export function createSiopv2Client({ oauth, window }: Siopv2FactoryParams) {
         response_type,
         scope
       }
+    }
+
+    get state() {
+      const current = window.localStorage.getItem(STATE_KEY)
+      if (current) return current
+
+      const state = (Math.random() + 1).toString(36).substring(4)
+      window.localStorage.setItem(STATE_KEY, state)
+      return state
+    }
+
+    get nonce() {
+      const current = window.localStorage.getItem(NONCE_KEY)
+      if (current) return current
+
+      const nonce = (Math.random() + 1).toString(36).substring(4)
+      window.localStorage.setItem(NONCE_KEY, nonce)
+      return nonce
+    }
+
+    get loginUrl(): string {
+      return this.buildLoginUrl().toString()
+    }
+
+    private buildLoginUrl(): URL {
+      // TODO throw an error in case of misconfiguration (host, authorizePath)
+      const url = new URL(oauth.host)
+      url.pathname = oauth.authorizePath || ''
+
+      const queryParams = {
+        'client_id':  this.clientId,
+        'redirect_uri': this.redirectUri,
+        'scope': this.scope,
+        'response_type': this.responseType,
+        'client_metadata': '{}',
+        'state': this.state,
+        'nonce': this.nonce
+      }
+
+      Object.entries(queryParams).forEach(([param, value]) => {
+        if (!value) return
+
+        url.searchParams.append(
+          param,
+          <string>value
+        )
+      })
+
+      return url
     }
   }
 }

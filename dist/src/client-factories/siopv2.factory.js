@@ -8,14 +8,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { OauthError } from "../oauth-responses";
+import { PUBLIC_KEY_STORAGE_KEY, PRIVATE_KEY_STORAGE_KEY, STATE_KEY, NONCE_KEY } from '../constants';
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { SignJWT, exportJWK, importJWK, generateKeyPair } from "jose";
-const PUBLIC_KEY_STORAGE_KEY = 'wallet_public_key';
-const PRIVATE_KEY_STORAGE_KEY = 'wallet_private_key';
 export function createSiopv2Client({ oauth, window }) {
     return class Siopv2 {
-        constructor() {
+        constructor({ clientId, redirectUri, responseType, scope }) {
             this.oauth = oauth;
+            this.clientId = clientId;
+            this.redirectUri = redirectUri;
+            this.scope = scope || '';
+            this.responseType = responseType || 'code';
         }
         parseSiopv2Response(location) {
             return __awaiter(this, void 0, void 0, function* () {
@@ -74,6 +77,45 @@ export function createSiopv2Client({ oauth, window }) {
                     scope
                 };
             });
+        }
+        get state() {
+            const current = window.localStorage.getItem(STATE_KEY);
+            if (current)
+                return current;
+            const state = (Math.random() + 1).toString(36).substring(4);
+            window.localStorage.setItem(STATE_KEY, state);
+            return state;
+        }
+        get nonce() {
+            const current = window.localStorage.getItem(NONCE_KEY);
+            if (current)
+                return current;
+            const nonce = (Math.random() + 1).toString(36).substring(4);
+            window.localStorage.setItem(NONCE_KEY, nonce);
+            return nonce;
+        }
+        get loginUrl() {
+            return this.buildLoginUrl().toString();
+        }
+        buildLoginUrl() {
+            // TODO throw an error in case of misconfiguration (host, authorizePath)
+            const url = new URL(oauth.host);
+            url.pathname = oauth.authorizePath || '';
+            const queryParams = {
+                'client_id': this.clientId,
+                'redirect_uri': this.redirectUri,
+                'scope': this.scope,
+                'response_type': this.responseType,
+                'client_metadata': '{}',
+                'state': this.state,
+                'nonce': this.nonce
+            };
+            Object.entries(queryParams).forEach(([param, value]) => {
+                if (!value)
+                    return;
+                url.searchParams.append(param, value);
+            });
+            return url;
         }
     };
 }

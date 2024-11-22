@@ -1,8 +1,6 @@
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, ImplicitSuccess } from "../oauth-responses"
-
-export const NONCE_KEY = 'boruta_nonce'
-export const STATE_KEY = 'boruta_state'
+import { STATE_KEY, NONCE_KEY } from '../constants'
 
 export type ImplicitFactoryParams =  {
   oauth: BorutaOauth
