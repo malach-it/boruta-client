@@ -8,7 +8,7 @@
       "dom"
     ],
     "target": "es6",
-    "strict": false,
+    "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "outDir": "dist"

@@ -2,7 +2,7 @@ import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, Siopv2Success } from "../oauth-responses"
 import { PUBLIC_KEY_STORAGE_KEY, PRIVATE_KEY_STORAGE_KEY, STATE_KEY, NONCE_KEY } from '../constants'
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
-import { SignJWT, exportJWK, exportPKCS8, importJWK, generateKeyPair } from "jose";
+import { SignJWT, exportJWK, exportPKCS8, importJWK, generateKeyPair, KeyLike, JWK } from "jose";
 
 export type Siopv2FactoryParams =  {
   oauth: BorutaOauth
@@ -26,6 +26,7 @@ export function createSiopv2Client({ oauth, window }: Siopv2FactoryParams) {
     redirectUri: string
     scope: string
     responseType: string
+    keyStore: KeyStore
 
     constructor({ clientId, redirectUri, responseType, scope }: Siopv2Params) {
       this.oauth = oauth
@@ -34,6 +35,7 @@ export function createSiopv2Client({ oauth, window }: Siopv2FactoryParams) {
       this.redirectUri = redirectUri
       this.scope = scope || ''
       this.responseType = responseType || 'code'
+      this.keyStore = new KeyStore()
     }
 
     async parseSiopv2Response(location: Location): Promise<Siopv2Success> {
@@ -65,7 +67,7 @@ export function createSiopv2Client({ oauth, window }: Siopv2FactoryParams) {
       // await oauth.api.get<jwksResponse>(oauth.jwksPath).then(({ data }) => {
       //   const keys = data.keys
       //   let jwt
-      //   while (true) {
+      //   while (keys.length) {
       //     const key = keys.pop()
       //     if (!key) {
       //       throw new OauthError({
@@ -82,7 +84,7 @@ export function createSiopv2Client({ oauth, window }: Siopv2FactoryParams) {
 
 
 
-      const { privateKey, did } = await extractKeys()
+      const { privateKey, did } = await extractKeys(this.keyStore)
       const now = Math.floor((new Date()) as unknown as number / 1000)
       const payload = {
         "iss": did,
@@ -208,20 +210,80 @@ function parseSiopv2Params(params: URLSearchParams): Promise<Siopv2Success> {
   })
 }
 
-async function extractKeys() {
-  let publicKeyJwk, publicKey, privateKey
+async function extractKeys(keyStore: KeyStore): Promise<{ privateKey: KeyLike, publicKey: KeyLike, did: string }> {
+  let publicKeyJwk
+  let publicKey: KeyLike = { type: 'undefined'}
+  let privateKey: KeyLike = { type: 'undefined'}
+  let did: string = ''
+  let keyFound = false
 
-  if (window.localStorage.getItem(PUBLIC_KEY_STORAGE_KEY) && window.localStorage.getItem(PRIVATE_KEY_STORAGE_KEY)) {
-    publicKeyJwk = JSON.parse(window.localStorage.getItem(PUBLIC_KEY_STORAGE_KEY))
-    publicKey = await importJWK(publicKeyJwk, 'ES256')
-    privateKey = await importJWK(JSON.parse(window.localStorage.getItem(PRIVATE_KEY_STORAGE_KEY)), 'ES256')
-  } else {
+  async function generateNewKeyPair (): Promise<{ privateKey: KeyLike, publicKey: KeyLike }> {
     const { privateKey, publicKey } = await generateKeyPair("ES256", { extractable: true })
     publicKeyJwk = await exportJWK(publicKey)
-    window.localStorage.setItem(PUBLIC_KEY_STORAGE_KEY, JSON.stringify(publicKeyJwk))
-    window.localStorage.setItem(PRIVATE_KEY_STORAGE_KEY, JSON.stringify(await exportJWK(privateKey)))
+    const privateKeyJwk = await exportJWK(privateKey)
+    keyStore.upsertKeyPair({ publicKeyJwk, privateKeyJwk })
+    return { privateKey, publicKey }
   }
 
-  const did = EbsiWallet.createDid("NATURAL_PERSON", publicKeyJwk)
+  if (keyStore.hasKey) {
+    publicKeyJwk = keyStore.publicKeyJwk
+    publicKey = await keyStore.publicKey()
+    privateKey = await keyStore.privateKey()
+    keyFound = publicKey.type !== 'undefined' && privateKey.type !== 'undefined'
+  }
+
+  if (!keyFound) {
+    const { publicKey: newPublicKey, privateKey: newPrivateKey } = await generateNewKeyPair()
+    publicKey = newPublicKey
+    privateKey = newPublicKey
+  }
+
+  did = EbsiWallet.createDid("NATURAL_PERSON", publicKeyJwk)
+
   return { publicKey, privateKey, did }
+}
+
+class KeyStore {
+  constructor () {}
+
+  get hasKey () {
+    return !!this.publicKeyJwk && !!this.privateKeyJwk
+  }
+
+  get publicKeyJwk () {
+    return JSON.parse(
+      window.localStorage.getItem(PUBLIC_KEY_STORAGE_KEY) || 'null'
+    )
+  }
+
+  async publicKey (): Promise<KeyLike> {
+    if (this.publicKeyJwk) {
+      // @ts-ignore
+      return importJWK(publicKeyJwk, 'ES256').catch(() => {
+        return { type: 'undefined'}
+      })
+    }
+    return Promise.resolve({ type: 'undefined'})
+  }
+
+  get privateKeyJwk () {
+    return JSON.parse(
+      window.localStorage.getItem(PRIVATE_KEY_STORAGE_KEY) || 'null'
+    )
+  }
+
+  async privateKey (): Promise<KeyLike> {
+    if (this.privateKeyJwk) {
+      // @ts-ignore
+      return importJWK(privateKeyJwk, 'ES256').catch(() => {
+        return { type: 'undefined'}
+      })
+    }
+    return Promise.resolve({ type: 'undefined'})
+  }
+
+  upsertKeyPair ({ publicKeyJwk, privateKeyJwk }: { publicKeyJwk: JWK, privateKeyJwk: JWK }) {
+    window.localStorage.setItem(PUBLIC_KEY_STORAGE_KEY, JSON.stringify(publicKeyJwk))
+    window.localStorage.setItem(PRIVATE_KEY_STORAGE_KEY, JSON.stringify(privateKeyJwk))
+  }
 }

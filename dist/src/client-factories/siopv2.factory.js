@@ -40,7 +40,7 @@ export function createSiopv2Client({ oauth, window }) {
                 // await oauth.api.get<jwksResponse>(oauth.jwksPath).then(({ data }) => {
                 //   const keys = data.keys
                 //   let jwt
-                //   while (true) {
+                //   while (keys.length) {
                 //     const key = keys.pop()
                 //     if (!key) {
                 //       throw new OauthError({
@@ -168,19 +168,34 @@ function parseSiopv2Params(params) {
 }
 function extractKeys() {
     return __awaiter(this, void 0, void 0, function* () {
-        let publicKeyJwk, publicKey, privateKey;
-        if (window.localStorage.getItem(PUBLIC_KEY_STORAGE_KEY) && window.localStorage.getItem(PRIVATE_KEY_STORAGE_KEY)) {
-            publicKeyJwk = JSON.parse(window.localStorage.getItem(PUBLIC_KEY_STORAGE_KEY));
-            publicKey = yield importJWK(publicKeyJwk, 'ES256');
-            privateKey = yield importJWK(JSON.parse(window.localStorage.getItem(PRIVATE_KEY_STORAGE_KEY)), 'ES256');
+        let publicKeyJwk;
+        function generateNewKeyPair() {
+            return __awaiter(this, void 0, void 0, function* () {
+                const { privateKey, publicKey } = yield generateKeyPair("ES256", { extractable: true });
+                publicKeyJwk = yield exportJWK(publicKey);
+                window.localStorage.setItem(PUBLIC_KEY_STORAGE_KEY, JSON.stringify(publicKeyJwk));
+                window.localStorage.setItem(PRIVATE_KEY_STORAGE_KEY, JSON.stringify(yield exportJWK(privateKey)));
+                return { privateKey, publicKey };
+            });
         }
-        else {
-            const { privateKey, publicKey } = yield generateKeyPair("ES256", { extractable: true });
-            publicKeyJwk = yield exportJWK(publicKey);
-            window.localStorage.setItem(PUBLIC_KEY_STORAGE_KEY, JSON.stringify(publicKeyJwk));
-            window.localStorage.setItem(PRIVATE_KEY_STORAGE_KEY, JSON.stringify(yield exportJWK(privateKey)));
+        let { publicKey, privateKey } = yield generateNewKeyPair();
+        if (window.localStorage.getItem(PUBLIC_KEY_STORAGE_KEY) &&
+            window.localStorage.getItem(PRIVATE_KEY_STORAGE_KEY)) {
+            publicKeyJwk = JSON.parse(window.localStorage.getItem(PUBLIC_KEY_STORAGE_KEY) || 'null');
+            if (publicKeyJwk) {
+                // @ts-ignore
+                publicKey = yield importJWK(publicKeyJwk, 'ES256');
+            }
+            const privateKeyJwk = JSON.parse(window.localStorage.getItem(PRIVATE_KEY_STORAGE_KEY) || 'null');
+            if (privateKeyJwk) {
+                // @ts-ignore
+                privateKey = yield importJWK(privateKeyJwk, 'ES256');
+            }
         }
         const did = EbsiWallet.createDid("NATURAL_PERSON", publicKeyJwk);
+        if (!did) {
+            throw new Error('Could not generate did.');
+        }
         return { publicKey, privateKey, did };
     });
 }
