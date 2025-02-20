@@ -7,10 +7,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+import { SignJWT } from "jose";
 import { OauthError } from "../oauth-responses";
-import { PUBLIC_KEY_STORAGE_KEY, PRIVATE_KEY_STORAGE_KEY, STATE_KEY, NONCE_KEY } from '../constants';
-import { EbsiWallet } from "@cef-ebsi/wallet-lib";
-import { SignJWT, exportJWK, importJWK, generateKeyPair } from "jose";
+import { KeyStore, extractKeys } from '../key-store';
+import { STATE_KEY, NONCE_KEY } from '../constants';
 export function createSiopv2Client({ oauth, window }) {
     return class Siopv2 {
         constructor({ clientId, redirectUri, responseType, scope }) {
@@ -19,6 +19,7 @@ export function createSiopv2Client({ oauth, window }) {
             this.redirectUri = redirectUri;
             this.scope = scope || '';
             this.responseType = responseType || 'code';
+            this.keyStore = new KeyStore(window);
         }
         parseSiopv2Response(location) {
             return __awaiter(this, void 0, void 0, function* () {
@@ -54,7 +55,7 @@ export function createSiopv2Client({ oauth, window }) {
                 //     console.log(jwt)
                 //   }
                 // })
-                const { privateKey, did } = yield extractKeys();
+                const { privateKey, did } = yield extractKeys(this.keyStore);
                 const now = Math.floor((new Date()) / 1000);
                 const payload = {
                     "iss": did,
@@ -164,38 +165,5 @@ function parseSiopv2Params(params) {
         response_mode,
         response_type,
         scope
-    });
-}
-function extractKeys() {
-    return __awaiter(this, void 0, void 0, function* () {
-        let publicKeyJwk;
-        function generateNewKeyPair() {
-            return __awaiter(this, void 0, void 0, function* () {
-                const { privateKey, publicKey } = yield generateKeyPair("ES256", { extractable: true });
-                publicKeyJwk = yield exportJWK(publicKey);
-                window.localStorage.setItem(PUBLIC_KEY_STORAGE_KEY, JSON.stringify(publicKeyJwk));
-                window.localStorage.setItem(PRIVATE_KEY_STORAGE_KEY, JSON.stringify(yield exportJWK(privateKey)));
-                return { privateKey, publicKey };
-            });
-        }
-        let { publicKey, privateKey } = yield generateNewKeyPair();
-        if (window.localStorage.getItem(PUBLIC_KEY_STORAGE_KEY) &&
-            window.localStorage.getItem(PRIVATE_KEY_STORAGE_KEY)) {
-            publicKeyJwk = JSON.parse(window.localStorage.getItem(PUBLIC_KEY_STORAGE_KEY) || 'null');
-            if (publicKeyJwk) {
-                // @ts-ignore
-                publicKey = yield importJWK(publicKeyJwk, 'ES256');
-            }
-            const privateKeyJwk = JSON.parse(window.localStorage.getItem(PRIVATE_KEY_STORAGE_KEY) || 'null');
-            if (privateKeyJwk) {
-                // @ts-ignore
-                privateKey = yield importJWK(privateKeyJwk, 'ES256');
-            }
-        }
-        const did = EbsiWallet.createDid("NATURAL_PERSON", publicKeyJwk);
-        if (!did) {
-            throw new Error('Could not generate did.');
-        }
-        return { publicKey, privateKey, did };
     });
 }

@@ -11,13 +11,13 @@ import { OauthError, ImplicitSuccess } from "../../src/oauth-responses"
 import { NONCE_KEY, STATE_KEY } from '../../src/constants'
 chai.use(chaiAsPromised)
 
-const window = stubInterface<Window>()
-Object.defineProperty(window, 'localStorage', {
-  value: stubInterface<Storage>(),
-  writable: true
-})
-
 describe('BorutaOauth', () => {
+  const window = stubInterface<Window>()
+  Object.defineProperty(window, 'localStorage', {
+    value: stubInterface<Storage>(),
+    writable: true
+  })
+
   const host = 'http://test.host'
   const tokenPath = '/token'
   const authorizePath = '/authorize'

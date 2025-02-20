@@ -31,7 +31,7 @@ export interface ImplicitSuccess {
 }
 
 export interface PreauthorizedCodeSuccess {
-  credentialOffer: object
+  preauthorized_code: string
 }
 
 export interface ClientCredentialsSuccess {
@@ -48,6 +48,12 @@ export interface TokenSuccess {
   expires_in: number
   refresh_token?: string
   state?: string
+  authorization_details?: object
+}
+
+export interface CredentialSuccess {
+  format: string
+  credential: string
 }
 
 export interface Siopv2Success {
