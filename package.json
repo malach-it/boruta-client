@@ -4,19 +4,19 @@
   "description": "A Typescript OpenId client",
   "main": "dist/index.js",
   "type": "module",
+  "types": "index.d.ts",
   "directories": {
     "test": "test"
   },
   "dependencies": {
     "@cef-ebsi/wallet-lib": "^5.0.5",
-    "axios": "^0.21.1",
+    "axios": "^1.7.9",
     "boruta-client": "github:malach-it/boruta-client",
     "jose": "^5.9.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.3"
   },
   "devDependencies": {
-    "@types/axios": "^0.14.0",
     "@types/chai": "^4.2.14",
     "@types/chai-as-promised": "^7.1.4",
     "@types/mocha": "^8.2.0",
