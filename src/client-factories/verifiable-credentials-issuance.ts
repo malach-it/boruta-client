@@ -48,10 +48,14 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }: Ver
 
       const params = new URLSearchParams(location.search)
       const {
-        preauthorized_code: preauthorizedCode
+        preauthorized_code: preauthorizedCode,
+        credential_issuer: credentialIssuer
       } = await parsePreauthorizedCodeParams(params)
 
-      return { preauthorized_code: preauthorizedCode }
+      return {
+        preauthorized_code: preauthorizedCode,
+        credential_issuer: credentialIssuer
+      }
     }
 
     getToken (preauthorizedCode: string): Promise<TokenSuccess> {
@@ -119,6 +123,13 @@ function parsePreauthorizedCodeParams(params: URLSearchParams): Promise<Preautho
 
   const credentialOffer = JSON.parse(decodeURIComponent(credential_offer))
 
+  if (!credentialOffer.credential_issuer) {
+    return Promise.reject(new OauthError({
+      error: 'unkown_error',
+      error_description: 'credential_offer parameter must contain a credential_issuer attribute.'
+    }))
+  }
+
   if (!credentialOffer.grants) {
     return Promise.reject(new OauthError({
       error: 'unkown_error',
@@ -141,7 +152,8 @@ function parsePreauthorizedCodeParams(params: URLSearchParams): Promise<Preautho
   }
 
   return Promise.resolve({
-    preauthorized_code: credentialOffer.grants['urn:ietf:params:oauth:grant-type:pre-authorized_code']['pre-authorized_code']
+    preauthorized_code: credentialOffer.grants['urn:ietf:params:oauth:grant-type:pre-authorized_code']['pre-authorized_code'],
+    credential_issuer: credentialOffer.credential_issuer
   })
 
 }

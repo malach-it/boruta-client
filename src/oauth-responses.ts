@@ -32,6 +32,7 @@ export interface ImplicitSuccess {
 
 export interface PreauthorizedCodeSuccess {
   preauthorized_code: string
+  credential_issuer: string
 }
 
 export interface ClientCredentialsSuccess {

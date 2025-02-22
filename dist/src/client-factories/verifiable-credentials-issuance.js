@@ -30,8 +30,11 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }) {
                     }));
                 }
                 const params = new URLSearchParams(location.search);
-                const { preauthorized_code: preauthorizedCode } = yield parsePreauthorizedCodeParams(params);
-                return { preauthorized_code: preauthorizedCode };
+                const { preauthorized_code: preauthorizedCode, credential_issuer: credentialIssuer } = yield parsePreauthorizedCodeParams(params);
+                return {
+                    preauthorized_code: preauthorizedCode,
+                    credential_issuer: credentialIssuer
+                };
             });
         }
         getToken(preauthorizedCode) {
@@ -89,6 +92,12 @@ function parsePreauthorizedCodeParams(params) {
         }));
     }
     const credentialOffer = JSON.parse(decodeURIComponent(credential_offer));
+    if (!credentialOffer.credential_issuer) {
+        return Promise.reject(new OauthError({
+            error: 'unkown_error',
+            error_description: 'credential_offer parameter must contain a credential_issuer attribute.'
+        }));
+    }
     if (!credentialOffer.grants) {
         return Promise.reject(new OauthError({
             error: 'unkown_error',
@@ -108,6 +117,7 @@ function parsePreauthorizedCodeParams(params) {
         }));
     }
     return Promise.resolve({
-        preauthorized_code: credentialOffer.grants['urn:ietf:params:oauth:grant-type:pre-authorized_code']['pre-authorized_code']
+        preauthorized_code: credentialOffer.grants['urn:ietf:params:oauth:grant-type:pre-authorized_code']['pre-authorized_code'],
+        credential_issuer: credentialOffer.credential_issuer
     });
 }
