@@ -39,6 +39,7 @@ export class BorutaOauth {
 
   get api() {
     return axios.create({
+      headers: { 'Content-Type': 'application/json' },
       baseURL: this.host
     })
   }

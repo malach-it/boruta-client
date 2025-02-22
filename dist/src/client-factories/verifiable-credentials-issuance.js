@@ -88,7 +88,7 @@ function parsePreauthorizedCodeParams(params) {
             error_description: 'credential_offer parameter is missing in preauthorized code response location.'
         }));
     }
-    const credentialOffer = JSON.parse(credential_offer);
+    const credentialOffer = JSON.parse(decodeURIComponent(credential_offer));
     if (!credentialOffer.grants) {
         return Promise.reject(new OauthError({
             error: 'unkown_error',
