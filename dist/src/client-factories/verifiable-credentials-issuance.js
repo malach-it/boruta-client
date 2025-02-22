@@ -12,10 +12,11 @@ import { OauthError } from "../oauth-responses";
 import { KeyStore, extractKeys } from '../key-store';
 export function createVerifiableCredentialsIssuanceClient({ oauth, window }) {
     return class VerifiableCredentialsIssuance {
-        constructor({ clientId, clientSecret, scope, grantType }) {
+        constructor({ clientId, clientSecret, redirectUri, scope, grantType }) {
             this.oauth = oauth;
             this.clientId = clientId;
             this.clientSecret = clientSecret;
+            this.redirectUri = redirectUri;
             this.grantType = grantType || 'authorization_code';
             this.scope = scope || '';
             this.keyStore = new KeyStore(window);
@@ -40,6 +41,7 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }) {
                 grant_type: this.grantType,
                 client_id: this.clientId,
                 client_secret: this.clientSecret,
+                redirect_uri: this.redirectUri,
                 code: preauthorizedCode,
                 scope: this.scope
             };

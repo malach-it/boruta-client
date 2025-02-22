@@ -12,6 +12,7 @@ export type VerifiableCredentialsIssuanceFactoryParams =  {
 export type VerifiableCredentialsIssuanceParams =  {
   clientId: string
   clientSecret: string
+  redirectUri: string
   grantType?: string
   scope?: string
 }
@@ -24,14 +25,16 @@ export function createVerifiableCredentialsIssuanceClient(
     grantType: string
     clientId: string
     clientSecret: string
+    redirectUri: string
     scope: string
     keyStore: KeyStore
 
-    constructor({ clientId, clientSecret, scope, grantType }: VerifiableCredentialsIssuanceParams) {
+    constructor({ clientId, clientSecret, redirectUri, scope, grantType }: VerifiableCredentialsIssuanceParams) {
       this.oauth = oauth
 
       this.clientId = clientId
       this.clientSecret = clientSecret
+      this.redirectUri = redirectUri
       this.grantType = grantType || 'authorization_code'
       this.scope = scope || ''
       this.keyStore = new KeyStore(window)
@@ -60,6 +63,7 @@ export function createVerifiableCredentialsIssuanceClient(
         grant_type: this.grantType,
         client_id: this.clientId,
         client_secret: this.clientSecret,
+        redirect_uri: this.redirectUri,
         code: preauthorizedCode,
         scope: this.scope
       }
