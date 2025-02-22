@@ -80,7 +80,9 @@ describe('BorutaOauth', () => {
             writable: true,
             value: `?credential_offer=${encodeURI(JSON.stringify({
               grants: {
-                'urn:ietf:params:oauth:grant-type:pre-authorized_code': preauthorizedCode
+                'urn:ietf:params:oauth:grant-type:pre-authorized_code': {
+                  'pre-authorized_code': preauthorizedCode
+                }
               }
             }))}`
           })

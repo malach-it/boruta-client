@@ -131,7 +131,14 @@ function parsePreauthorizedCodeParams(params: URLSearchParams): Promise<Preautho
     }))
   }
 
+  if (!credentialOffer.grants['urn:ietf:params:oauth:grant-type:pre-authorized_code']['pre-authorized_code']) {
+    return Promise.reject(new OauthError({
+      error: 'unkown_error',
+      error_description: 'credential_offer urn:ietf:params:oauth:grant-type:pre-authorized_code must contain a pre-authorized_code attribute.'
+    }))
+  }
+
   return Promise.resolve({
-    preauthorized_code: credentialOffer.grants['urn:ietf:params:oauth:grant-type:pre-authorized_code']
+    preauthorized_code: credentialOffer.grants['urn:ietf:params:oauth:grant-type:pre-authorized_code']['pre-authorized_code']
   })
 }

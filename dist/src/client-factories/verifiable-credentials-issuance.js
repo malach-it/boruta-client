@@ -86,7 +86,7 @@ function parsePreauthorizedCodeParams(params) {
             error_description: 'credential_offer parameter is missing in preauthorized code response location.'
         }));
     }
-    const credentialOffer = JSON.parse(decodeURIComponent(credential_offer));
+    const credentialOffer = JSON.parse(credential_offer);
     if (!credentialOffer.grants) {
         return Promise.reject(new OauthError({
             error: 'unkown_error',
@@ -99,7 +99,13 @@ function parsePreauthorizedCodeParams(params) {
             error_description: 'credential_offer grants must contain urn:ietf:params:oauth:grant-type:pre-authorized_code attribute.'
         }));
     }
+    if (!credentialOffer.grants['urn:ietf:params:oauth:grant-type:pre-authorized_code']['pre-authorized_code']) {
+        return Promise.reject(new OauthError({
+            error: 'unkown_error',
+            error_description: 'credential_offer urn:ietf:params:oauth:grant-type:pre-authorized_code must contain a pre-authorized_code attribute.'
+        }));
+    }
     return Promise.resolve({
-        preauthorized_code: credentialOffer.grants['urn:ietf:params:oauth:grant-type:pre-authorized_code']
+        preauthorized_code: credentialOffer.grants['urn:ietf:params:oauth:grant-type:pre-authorized_code']['pre-authorized_code']
     });
 }
