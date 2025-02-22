@@ -17,9 +17,7 @@ export type VerifiableCredentialsIssuanceParams =  {
   scope?: string
 }
 
-export function createVerifiableCredentialsIssuanceClient(
-  { oauth, window }: VerifiableCredentialsIssuanceFactoryParams
-) {
+export function createVerifiableCredentialsIssuanceClient({ oauth, window }: VerifiableCredentialsIssuanceFactoryParams) {
   return class VerifiableCredentialsIssuance {
     oauth: BorutaOauth
     grantType: string
@@ -119,7 +117,7 @@ function parsePreauthorizedCodeParams(params: URLSearchParams): Promise<Preautho
     }))
   }
 
-  const credentialOffer = JSON.parse(credential_offer)
+  const credentialOffer = JSON.parse(decodeURIComponent(credential_offer))
 
   if (!credentialOffer.grants) {
     return Promise.reject(new OauthError({
@@ -145,4 +143,5 @@ function parsePreauthorizedCodeParams(params: URLSearchParams): Promise<Preautho
   return Promise.resolve({
     preauthorized_code: credentialOffer.grants['urn:ietf:params:oauth:grant-type:pre-authorized_code']['pre-authorized_code']
   })
+
 }

@@ -38,7 +38,7 @@ describe('BorutaOauth', () => {
     })
 
     describe('OAuth request returns an error', () => {
-      const message = 'request could not be processed'
+      const message = 'request couls not be processed'
       beforeEach(() => {
         nock(host)
           .post(revokePath)
