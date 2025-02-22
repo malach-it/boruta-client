@@ -39,6 +39,9 @@ export class BorutaOauth {
 
   get api() {
     return axios.create({
+      adapter: 'fetch',
+      fetchOptions: { mode: 'no-cors' },
+      headers: { 'Content-Type': 'application/json' },
       baseURL: this.host
     })
   }
