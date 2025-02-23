@@ -89,7 +89,7 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }: Ver
 
       const proof = {
         proof_type: 'jwt',
-        proof: proofJwt
+        jwt: proofJwt
       }
 
       const body = {

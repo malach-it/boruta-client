@@ -63,7 +63,7 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }) {
                     .sign(privateKey);
                 const proof = {
                     proof_type: 'jwt',
-                    proof: proofJwt
+                    jwt: proofJwt
                 };
                 const body = {
                     credential_identifier: credentialIdentifier,
