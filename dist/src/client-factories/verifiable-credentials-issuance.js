@@ -17,7 +17,7 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }) {
             this.clientId = clientId;
             this.clientSecret = clientSecret;
             this.redirectUri = redirectUri;
-            this.grantType = grantType || 'authorization_code';
+            this.grantType = grantType || 'urn:ietf:params:oauth:grant-type:pre-authorized_code';
             this.scope = scope || '';
             this.keyStore = new KeyStore(window);
         }
@@ -45,7 +45,7 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }) {
                 client_id: this.clientId,
                 client_secret: this.clientSecret,
                 redirect_uri: this.redirectUri,
-                code: preauthorizedCode,
+                'pre-authorized_code': preauthorizedCode,
                 scope: this.scope
             };
             return api.post(tokenPath, body).then(({ data }) => {
