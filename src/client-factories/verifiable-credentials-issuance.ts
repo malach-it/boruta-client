@@ -79,7 +79,6 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }: Ver
 
     async getCredential ({
       access_token: accessToken,
-      authorization_details: authorizationDetails
     }: TokenSuccess, credentialIdentifier: string, format: string) {
       const { oauth: { api, credentialPath = '' } } = this
       const { privateKey, did } = await extractKeys(this.keyStore)

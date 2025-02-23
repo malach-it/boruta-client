@@ -24,7 +24,7 @@ export class KeyStore {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.publicKeyJwk) {
                 // @ts-ignore
-                return importJWK(publicKeyJwk, 'ES256').catch(() => {
+                return importJWK(this.publicKeyJwk, 'ES256').catch(() => {
                     return { type: 'undefined' };
                 });
             }
@@ -38,7 +38,7 @@ export class KeyStore {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.privateKeyJwk) {
                 // @ts-ignore
-                return importJWK(privateKeyJwk, 'ES256').catch(() => {
+                return importJWK(this.privateKeyJwk, 'ES256').catch(() => {
                     return { type: 'undefined' };
                 });
             }
@@ -81,7 +81,7 @@ export function extractKeys(keyStore) {
         if (!keyFound) {
             throw new Error('Could not extract key pair.');
         }
-        did = EbsiWallet.createDid("NATURAL_PERSON", publicKeyJwk);
+        did = EbsiWallet.createDid("NATURAL_PERSON", keyStore.publicKeyJwk);
         return { publicKey, privateKey, did };
     });
 }

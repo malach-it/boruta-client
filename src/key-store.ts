@@ -22,7 +22,7 @@ export class KeyStore {
   async publicKey (): Promise<KeyLike> {
     if (this.publicKeyJwk) {
       // @ts-ignore
-      return importJWK(publicKeyJwk, 'ES256').catch(() => {
+      return importJWK(this.publicKeyJwk, 'ES256').catch(() => {
         return { type: 'undefined'}
       })
     }
@@ -38,7 +38,7 @@ export class KeyStore {
   async privateKey (): Promise<KeyLike> {
     if (this.privateKeyJwk) {
       // @ts-ignore
-      return importJWK(privateKeyJwk, 'ES256').catch(() => {
+      return importJWK(this.privateKeyJwk, 'ES256').catch(() => {
         return { type: 'undefined'}
       })
     }
@@ -84,7 +84,7 @@ export async function extractKeys(keyStore: KeyStore): Promise<{ privateKey: Key
     throw new Error('Could not extract key pair.')
   }
 
-  did = EbsiWallet.createDid("NATURAL_PERSON", publicKeyJwk)
+  did = EbsiWallet.createDid("NATURAL_PERSON", keyStore.publicKeyJwk)
 
   return { publicKey, privateKey, did }
 }
