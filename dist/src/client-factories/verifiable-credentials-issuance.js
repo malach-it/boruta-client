@@ -59,7 +59,7 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }) {
                 const { oauth: { api, credentialPath = '' } } = this;
                 const { privateKey, did } = yield extractKeys(this.keyStore);
                 const proofJwt = yield new SignJWT({})
-                    .setProtectedHeader({ alg: 'ES256', kid: did })
+                    .setProtectedHeader({ alg: 'ES256', typ: 'JWT', kid: did })
                     .sign(privateKey);
                 const proof = {
                     proof_type: 'jwt',
