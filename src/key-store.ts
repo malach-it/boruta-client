@@ -1,5 +1,4 @@
 import { EbsiWallet } from "@cef-ebsi/wallet-lib"
-import { v4 as uuidv4 } from 'uuid'
 import { exportJWK, exportPKCS8, importJWK, generateKeyPair, KeyLike, JWK } from "jose"
 import { PUBLIC_KEY_STORAGE_KEY, PRIVATE_KEY_STORAGE_KEY } from './constants'
 

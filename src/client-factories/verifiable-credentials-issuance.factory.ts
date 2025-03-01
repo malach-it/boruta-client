@@ -3,6 +3,7 @@ import { SignJWT } from "jose";
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, PreauthorizedCodeSuccess, TokenSuccess, CredentialSuccess } from "../oauth-responses"
 import { KeyStore, extractKeys } from '../key-store'
+import { CredentialsStore } from '../credentials-store'
 
 export type VerifiableCredentialsIssuanceFactoryParams =  {
   oauth: BorutaOauth
@@ -11,7 +12,7 @@ export type VerifiableCredentialsIssuanceFactoryParams =  {
 
 export type VerifiableCredentialsIssuanceParams =  {
   clientId: string
-  clientSecret: string
+  clientSecret?: string
   redirectUri: string
   grantType?: string
   scope?: string
@@ -22,10 +23,11 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }: Ver
     oauth: BorutaOauth
     grantType: string
     clientId: string
-    clientSecret: string
+    clientSecret: string | undefined
     redirectUri: string
     scope: string
     keyStore: KeyStore
+    credentialsStore: CredentialsStore
 
     constructor({ clientId, clientSecret, redirectUri, scope, grantType }: VerifiableCredentialsIssuanceParams) {
       this.oauth = oauth
@@ -36,6 +38,7 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }: Ver
       this.grantType = grantType || 'urn:ietf:params:oauth:grant-type:pre-authorized_code'
       this.scope = scope || ''
       this.keyStore = new KeyStore(window)
+      this.credentialsStore = new CredentialsStore(window)
     }
 
     async parsePreauthorizedCodeResponse(location: Location): Promise<PreauthorizedCodeSuccess> {
@@ -109,6 +112,8 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }: Ver
         return data
       }).catch(({ status, response }) => {
         throw new OauthError({ status, ...response.data })
+      }).then(response => {
+        return this.credentialsStore.insertCredential(credentialIdentifier, response)
       })
     }
   }
