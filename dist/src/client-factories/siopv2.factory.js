@@ -55,7 +55,7 @@ export function createSiopv2Client({ oauth, window }) {
                 //     console.log(jwt)
                 //   }
                 // })
-                const { privateKey, did } = yield extractKeys(this.keyStore);
+                const { privateKey, did } = yield extractKeys(this.keyStore, client_id);
                 const now = Math.floor((new Date()) / 1000);
                 const payload = {
                     "iss": did,

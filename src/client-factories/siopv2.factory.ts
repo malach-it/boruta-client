@@ -84,7 +84,7 @@ export function createSiopv2Client({ oauth, window }: Siopv2FactoryParams) {
 
 
 
-      const { privateKey, did } = await extractKeys(this.keyStore)
+      const { privateKey, did } = await extractKeys(this.keyStore, client_id)
       const now = Math.floor((new Date()) as unknown as number / 1000)
       const payload = {
         "iss": did,

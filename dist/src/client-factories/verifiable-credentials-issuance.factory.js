@@ -57,7 +57,7 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }) {
         getCredential(_a, credentialIdentifier_1, format_1) {
             return __awaiter(this, arguments, void 0, function* ({ access_token: accessToken, }, credentialIdentifier, format) {
                 const { oauth: { api, credentialPath = '' } } = this;
-                const { privateKey, did } = yield extractKeys(this.keyStore);
+                const { privateKey, did } = yield extractKeys(this.keyStore, accessToken);
                 const proofJwt = yield new SignJWT({
                     iat: (Date.now() / 1000),
                     aud: this.oauth.host

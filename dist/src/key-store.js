@@ -50,7 +50,17 @@ export class KeyStore {
         this.window.localStorage.setItem(PRIVATE_KEY_STORAGE_KEY, JSON.stringify(privateKeyJwk));
     }
 }
-export function extractKeys(keyStore) {
+export function extractKeys(keyStore, eventKey) {
+    return __awaiter(this, void 0, void 0, function* () {
+        keyStore.window.dispatchEvent(new Event('extract_key-request~' + eventKey));
+        return new Promise((resolve) => {
+            keyStore.window.addEventListener('extract_key-approval~' + eventKey, () => {
+                return doExtractKeys(keyStore).then(resolve);
+            });
+        });
+    });
+}
+function doExtractKeys(keyStore) {
     return __awaiter(this, void 0, void 0, function* () {
         let publicKeyJwk;
         let publicKey = { type: 'undefined' };

@@ -1,5 +1,6 @@
-import { EbsiWallet } from "@cef-ebsi/wallet-lib";
-import { exportJWK, exportPKCS8, importJWK, generateKeyPair, KeyLike, JWK } from "jose";
+import { EbsiWallet } from "@cef-ebsi/wallet-lib"
+import { v4 as uuidv4 } from 'uuid'
+import { exportJWK, exportPKCS8, importJWK, generateKeyPair, KeyLike, JWK } from "jose"
 import { PUBLIC_KEY_STORAGE_KEY, PRIVATE_KEY_STORAGE_KEY } from './constants'
 
 export class KeyStore {
@@ -51,7 +52,17 @@ export class KeyStore {
   }
 }
 
-export async function extractKeys(keyStore: KeyStore): Promise<{ privateKey: KeyLike, publicKey: KeyLike, did: string }> {
+export async function extractKeys(keyStore: KeyStore, eventKey: string): Promise<{ privateKey: KeyLike, publicKey: KeyLike, did: string }> {
+  keyStore.window.dispatchEvent(new Event('extract_key-request~' + eventKey))
+
+  return new Promise((resolve) => {
+    keyStore.window.addEventListener('extract_key-approval~' + eventKey, () => {
+      return doExtractKeys(keyStore).then(resolve)
+    })
+  })
+}
+
+async function doExtractKeys(keyStore: KeyStore): Promise<{ privateKey: KeyLike, publicKey: KeyLike, did: string }> {
   let publicKeyJwk
   let publicKey: KeyLike = { type: 'undefined'}
   let privateKey: KeyLike = { type: 'undefined'}
