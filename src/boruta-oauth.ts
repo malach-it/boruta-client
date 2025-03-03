@@ -7,9 +7,11 @@ import {
   createSiopv2Client,
   createVerifiableCredentialsIssuanceClient
 } from './client-factories'
+import { Storage } from './storage'
 
 export type BorutaOauthParams = {
   window: Window
+  storage?: Storage
   host: string
   authorizePath?: string
   tokenPath?: string
@@ -20,6 +22,7 @@ export type BorutaOauthParams = {
 
 export class BorutaOauth {
   window: Window
+  storage?: Storage
   host: string
   authorizePath?: string
   tokenPath?: string
@@ -27,8 +30,9 @@ export class BorutaOauth {
   revokePath?: string
   jwksPath?: string
 
-  constructor ({ host, authorizePath, tokenPath, credentialPath, revokePath, jwksPath, window }: BorutaOauthParams) {
+  constructor ({ host, authorizePath, tokenPath, credentialPath, revokePath, jwksPath, window, storage }: BorutaOauthParams) {
     this.window = window
+    this.storage = storage
     this.host = host
     this.tokenPath = tokenPath
     this.credentialPath = credentialPath
@@ -49,7 +53,10 @@ export class BorutaOauth {
   }
 
   get VerifiableCredentialsIssuance() {
-    return createVerifiableCredentialsIssuanceClient({ oauth: this, window: this.window })
+    if (!this.storage) {
+      throw new Error('You must specify a storage to build this client type.')
+    }
+    return createVerifiableCredentialsIssuanceClient({ oauth: this, window: this.window, storage: this.storage })
   }
 
   get PreauthorizedCode() {
@@ -65,6 +72,10 @@ export class BorutaOauth {
   }
 
   get Siopv2() {
-    return createSiopv2Client({ oauth: this, window: this.window })
+    if (!this.storage) {
+      throw new Error('You must specify a storage to build this client type.')
+    }
+    return createSiopv2Client({ oauth: this, window: this.window, storage: this.storage })
   }
 }
+

@@ -3,10 +3,12 @@ import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, Siopv2Success } from "../oauth-responses"
 import { KeyStore, extractKeys } from '../key-store'
 import { STATE_KEY, NONCE_KEY } from '../constants'
+import { Storage } from '../storage'
 
 export type Siopv2FactoryParams =  {
   oauth: BorutaOauth
   window: Window
+  storage: Storage
 }
 
 export type Siopv2Params =  {
@@ -16,7 +18,7 @@ export type Siopv2Params =  {
   responseType?: string
 }
 
-export function createSiopv2Client({ oauth, window }: Siopv2FactoryParams) {
+export function createSiopv2Client({ oauth, window, storage }: Siopv2FactoryParams) {
   return class Siopv2 {
     oauth: BorutaOauth
     publicKey?: any
@@ -35,7 +37,7 @@ export function createSiopv2Client({ oauth, window }: Siopv2FactoryParams) {
       this.redirectUri = redirectUri
       this.scope = scope || ''
       this.responseType = responseType || 'code'
-      this.keyStore = new KeyStore(window)
+      this.keyStore = new KeyStore(window, storage)
     }
 
     async parseSiopv2Response(location: Location): Promise<Siopv2Success> {

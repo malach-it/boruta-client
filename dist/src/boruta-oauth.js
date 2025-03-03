@@ -1,8 +1,9 @@
 import axios from 'axios';
 import { createPreauthorizedCodeClient, createClientCredentialsClient, createImplicitClient, createRevokeClient, createSiopv2Client, createVerifiableCredentialsIssuanceClient } from './client-factories';
 export class BorutaOauth {
-    constructor({ host, authorizePath, tokenPath, credentialPath, revokePath, jwksPath, window }) {
+    constructor({ host, authorizePath, tokenPath, credentialPath, revokePath, jwksPath, window, storage }) {
         this.window = window;
+        this.storage = storage;
         this.host = host;
         this.tokenPath = tokenPath;
         this.credentialPath = credentialPath;
@@ -20,7 +21,10 @@ export class BorutaOauth {
         return createClientCredentialsClient({ oauth: this });
     }
     get VerifiableCredentialsIssuance() {
-        return createVerifiableCredentialsIssuanceClient({ oauth: this, window: this.window });
+        if (!this.storage) {
+            throw new Error('You must specify a storage to build this client type.');
+        }
+        return createVerifiableCredentialsIssuanceClient({ oauth: this, window: this.window, storage: this.storage });
     }
     get PreauthorizedCode() {
         return createPreauthorizedCodeClient({ oauth: this, window: this.window });
@@ -32,6 +36,9 @@ export class BorutaOauth {
         return createRevokeClient({ oauth: this, window: this.window });
     }
     get Siopv2() {
-        return createSiopv2Client({ oauth: this, window: this.window });
+        if (!this.storage) {
+            throw new Error('You must specify a storage to build this client type.');
+        }
+        return createSiopv2Client({ oauth: this, window: this.window, storage: this.storage });
     }
 }

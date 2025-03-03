@@ -11,43 +11,54 @@ import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { exportJWK, importJWK, generateKeyPair } from "jose";
 import { PUBLIC_KEY_STORAGE_KEY, PRIVATE_KEY_STORAGE_KEY } from './constants';
 export class KeyStore {
-    constructor(window) {
+    constructor(window, storage) {
+        this.storage = storage;
         this.window = window;
     }
-    get hasKey() {
-        return !!this.publicKeyJwk && !!this.privateKeyJwk;
+    hasKey() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return !!(yield this.publicKeyJwk()) && !!(yield this.privateKeyJwk());
+        });
     }
-    get publicKeyJwk() {
-        return JSON.parse(this.window.localStorage.getItem(PUBLIC_KEY_STORAGE_KEY) || 'null');
+    publicKeyJwk() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.storage.get(PUBLIC_KEY_STORAGE_KEY);
+        });
     }
     publicKey() {
         return __awaiter(this, void 0, void 0, function* () {
-            if (this.publicKeyJwk) {
+            const publicKeyJwk = yield this.publicKeyJwk();
+            if (publicKeyJwk) {
                 // @ts-ignore
-                return importJWK(this.publicKeyJwk, 'ES256').catch(() => {
+                return importJWK(publicKeyJwk, 'ES256').catch(() => {
                     return { type: 'undefined' };
                 });
             }
             return Promise.resolve({ type: 'undefined' });
         });
     }
-    get privateKeyJwk() {
-        return JSON.parse(this.window.localStorage.getItem(PRIVATE_KEY_STORAGE_KEY) || 'null');
+    privateKeyJwk() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.storage.get(PRIVATE_KEY_STORAGE_KEY);
+        });
     }
     privateKey() {
         return __awaiter(this, void 0, void 0, function* () {
-            if (this.privateKeyJwk) {
+            const privateKeyJwk = yield this.privateKeyJwk();
+            if (privateKeyJwk) {
                 // @ts-ignore
-                return importJWK(this.privateKeyJwk, 'ES256').catch(() => {
+                return importJWK(privateKeyJwk, 'ES256').catch(() => {
                     return { type: 'undefined' };
                 });
             }
             return Promise.resolve({ type: 'undefined' });
         });
     }
-    upsertKeyPair({ publicKeyJwk, privateKeyJwk }) {
-        this.window.localStorage.setItem(PUBLIC_KEY_STORAGE_KEY, JSON.stringify(publicKeyJwk));
-        this.window.localStorage.setItem(PRIVATE_KEY_STORAGE_KEY, JSON.stringify(privateKeyJwk));
+    upsertKeyPair(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ publicKeyJwk, privateKeyJwk }) {
+            yield this.storage.store(PUBLIC_KEY_STORAGE_KEY, publicKeyJwk);
+            yield this.storage.store(PRIVATE_KEY_STORAGE_KEY, privateKeyJwk);
+        });
     }
 }
 export function extractKeys(keyStore, eventKey) {
@@ -62,7 +73,7 @@ export function extractKeys(keyStore, eventKey) {
 }
 function doExtractKeys(keyStore) {
     return __awaiter(this, void 0, void 0, function* () {
-        let publicKeyJwk;
+        let publicKeyJwk = yield keyStore.publicKeyJwk();
         let publicKey = { type: 'undefined' };
         let privateKey = { type: 'undefined' };
         let did = '';
@@ -72,12 +83,11 @@ function doExtractKeys(keyStore) {
                 const { privateKey, publicKey } = yield generateKeyPair("ES256", { extractable: true });
                 publicKeyJwk = yield exportJWK(publicKey);
                 const privateKeyJwk = yield exportJWK(privateKey);
-                keyStore.upsertKeyPair({ publicKeyJwk, privateKeyJwk });
+                yield keyStore.upsertKeyPair({ publicKeyJwk, privateKeyJwk });
                 return { privateKey, publicKey };
             });
         }
-        if (keyStore.hasKey) {
-            publicKeyJwk = keyStore.publicKeyJwk;
+        if (yield keyStore.hasKey()) {
             publicKey = yield keyStore.publicKey();
             privateKey = yield keyStore.privateKey();
             keyFound = publicKey.type !== 'undefined' && privateKey.type !== 'undefined';
@@ -88,10 +98,10 @@ function doExtractKeys(keyStore) {
             privateKey = newPrivateKey;
             keyFound = publicKey.type !== 'undefined' && privateKey.type !== 'undefined';
         }
-        if (!keyFound) {
+        if (!keyFound || !publicKeyJwk) {
             throw new Error('Could not extract key pair.');
         }
-        did = EbsiWallet.createDid("NATURAL_PERSON", keyStore.publicKeyJwk);
+        did = EbsiWallet.createDid("NATURAL_PERSON", publicKeyJwk);
         return { publicKey, privateKey, did };
     });
 }

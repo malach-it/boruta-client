@@ -5,6 +5,7 @@ import chaiAsPromised from 'chai-as-promised'
 import nock from 'nock'
 import { stubInterface } from 'ts-sinon'
 import { BorutaOauth } from '../../src/boruta-oauth'
+import { BrowserStorage } from '../../src/storage'
 import { OauthError, TokenSuccess } from "../../src/oauth-responses"
 import { PRIVATE_KEY_STORAGE_KEY, PUBLIC_KEY_STORAGE_KEY } from '../../src/constants'
 chai.use(chaiAsPromised)
@@ -18,7 +19,8 @@ describe('BorutaOauth', () => {
   const host = 'http://test.host'
   const tokenPath = '/token'
   const credentialPath = '/credential'
-  const oauth = new BorutaOauth({ host, tokenPath, credentialPath, window })
+  const storage = new BrowserStorage(window)
+  const oauth = new BorutaOauth({ host, tokenPath, credentialPath, window, storage })
   beforeEach(() => {
     // @ts-ignore
     window.localStorage.getItem.withArgs(PRIVATE_KEY_STORAGE_KEY).returns(undefined)

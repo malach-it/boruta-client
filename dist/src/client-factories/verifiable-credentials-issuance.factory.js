@@ -11,7 +11,7 @@ import { SignJWT } from "jose";
 import { OauthError } from "../oauth-responses";
 import { KeyStore, extractKeys } from '../key-store';
 import { CredentialsStore } from '../credentials-store';
-export function createVerifiableCredentialsIssuanceClient({ oauth, window }) {
+export function createVerifiableCredentialsIssuanceClient({ oauth, window, storage }) {
     return class VerifiableCredentialsIssuance {
         constructor({ clientId, clientSecret, redirectUri, scope, grantType }) {
             this.oauth = oauth;
@@ -20,8 +20,8 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }) {
             this.redirectUri = redirectUri;
             this.grantType = grantType || 'urn:ietf:params:oauth:grant-type:pre-authorized_code';
             this.scope = scope || '';
-            this.keyStore = new KeyStore(window);
-            this.credentialsStore = new CredentialsStore(window);
+            this.keyStore = new KeyStore(window, storage);
+            this.credentialsStore = new CredentialsStore(window, storage);
         }
         parsePreauthorizedCodeResponse(location) {
             return __awaiter(this, void 0, void 0, function* () {

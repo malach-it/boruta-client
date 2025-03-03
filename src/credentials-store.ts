@@ -1,14 +1,17 @@
 import { decodeSdJwt } from '@sd-jwt/decode'
 
 import { CredentialSuccess } from './oauth-responses'
+import { Storage } from './storage'
 
 const CREDENTIALS_KEY = 'boruta-client_credentials'
 
 export class CredentialsStore {
   window: Window
+  storage: Storage
 
-  constructor (window: Window) {
+  constructor (window: Window, storage: Storage) {
     this.window = window
+    this.storage = storage
   }
 
   async insertCredential(credentialId: string, credentialResponse: CredentialSuccess): Promise<Array<Credential>> {
@@ -22,10 +25,11 @@ export class CredentialsStore {
   }
 
   private async doInsertCredential(credentialId: string, credentialResponse: CredentialSuccess): Promise<Array<Credential>> {
-    const credentials = this.credentials
+    const credentials = await this.credentials()
 
     credentials.push(await Credential.fromResponse(credentialId, credentialResponse))
-    this.window.localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(credentials))
+
+    await this.storage.store(CREDENTIALS_KEY, credentials)
 
     return credentials
   }
@@ -35,13 +39,13 @@ export class CredentialsStore {
 
     return new Promise((resolve) => {
       this.window.addEventListener('delete_credential-approval~' + credential, () => {
-        return resolve(this.doDeleteCredential(credential))
+        return this.doDeleteCredential(credential).then(resolve)
       })
     })
   }
 
-  private doDeleteCredential(credential: string): Array<Credential> {
-    const credentials = this.credentials
+  private async doDeleteCredential(credential: string): Promise<Array<Credential>> {
+    const credentials = await this.credentials()
 
     const toDelete = credentials.find((e: Credential) => {
       return e.credential == credential
@@ -50,15 +54,17 @@ export class CredentialsStore {
     if (!toDelete) return credentials
 
     credentials.splice(credentials.indexOf(toDelete), 1)
-    this.window.localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(credentials))
+    await this.storage.store(CREDENTIALS_KEY, credentials)
 
     return credentials
   }
 
-  get credentials (): Array<Credential> {
-    return JSON.parse(
-      this.window.localStorage.getItem(CREDENTIALS_KEY) || '[]'
-    ).map((credential: CredentialParams) => new Credential(credential))
+  async credentials (): Promise<Array<Credential>> {
+    return this.storage.get<Array<CredentialParams>>(CREDENTIALS_KEY).then(credentials => {
+      if (!credentials) return []
+
+      return credentials.map((credential: CredentialParams) => new Credential(credential))
+    })
   }
 }
 

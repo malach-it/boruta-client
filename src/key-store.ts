@@ -1,53 +1,56 @@
 import { EbsiWallet } from "@cef-ebsi/wallet-lib"
 import { exportJWK, exportPKCS8, importJWK, generateKeyPair, KeyLike, JWK } from "jose"
 import { PUBLIC_KEY_STORAGE_KEY, PRIVATE_KEY_STORAGE_KEY } from './constants'
+import { Storage } from './storage'
 
 export class KeyStore {
+  storage: Storage
   window: Window
 
-  constructor (window: Window) {
+  constructor (window: Window, storage: Storage) {
+    this.storage = storage
     this.window = window
   }
 
-  get hasKey () {
-    return !!this.publicKeyJwk && !!this.privateKeyJwk
+  async hasKey () {
+    return !!(await this.publicKeyJwk()) && !!(await this.privateKeyJwk())
   }
 
-  get publicKeyJwk () {
-    return JSON.parse(
-      this.window.localStorage.getItem(PUBLIC_KEY_STORAGE_KEY) || 'null'
-    )
+  async publicKeyJwk () {
+    return this.storage.get<JWK>(PUBLIC_KEY_STORAGE_KEY)
   }
 
   async publicKey (): Promise<KeyLike> {
-    if (this.publicKeyJwk) {
+    const publicKeyJwk = await this.publicKeyJwk()
+
+    if (publicKeyJwk) {
       // @ts-ignore
-      return importJWK(this.publicKeyJwk, 'ES256').catch(() => {
+      return importJWK(publicKeyJwk, 'ES256').catch(() => {
         return { type: 'undefined'}
       })
     }
     return Promise.resolve({ type: 'undefined'})
   }
 
-  get privateKeyJwk () {
-    return JSON.parse(
-      this.window.localStorage.getItem(PRIVATE_KEY_STORAGE_KEY) || 'null'
-    )
+  async privateKeyJwk () {
+    return this.storage.get<JWK>(PRIVATE_KEY_STORAGE_KEY)
   }
 
   async privateKey (): Promise<KeyLike> {
-    if (this.privateKeyJwk) {
+    const privateKeyJwk = await this.privateKeyJwk()
+
+    if (privateKeyJwk) {
       // @ts-ignore
-      return importJWK(this.privateKeyJwk, 'ES256').catch(() => {
+      return importJWK(privateKeyJwk, 'ES256').catch(() => {
         return { type: 'undefined'}
       })
     }
     return Promise.resolve({ type: 'undefined'})
   }
 
-  upsertKeyPair ({ publicKeyJwk, privateKeyJwk }: { publicKeyJwk: JWK, privateKeyJwk: JWK }) {
-    this.window.localStorage.setItem(PUBLIC_KEY_STORAGE_KEY, JSON.stringify(publicKeyJwk))
-    this.window.localStorage.setItem(PRIVATE_KEY_STORAGE_KEY, JSON.stringify(privateKeyJwk))
+  async upsertKeyPair ({ publicKeyJwk, privateKeyJwk }: { publicKeyJwk: JWK, privateKeyJwk: JWK }) {
+    await this.storage.store(PUBLIC_KEY_STORAGE_KEY, publicKeyJwk)
+    await this.storage.store(PRIVATE_KEY_STORAGE_KEY, privateKeyJwk)
   }
 }
 
@@ -62,7 +65,7 @@ export async function extractKeys(keyStore: KeyStore, eventKey: string): Promise
 }
 
 async function doExtractKeys(keyStore: KeyStore): Promise<{ privateKey: KeyLike, publicKey: KeyLike, did: string }> {
-  let publicKeyJwk
+  let publicKeyJwk = await keyStore.publicKeyJwk()
   let publicKey: KeyLike = { type: 'undefined'}
   let privateKey: KeyLike = { type: 'undefined'}
   let did: string = ''
@@ -72,12 +75,11 @@ async function doExtractKeys(keyStore: KeyStore): Promise<{ privateKey: KeyLike,
     const { privateKey, publicKey } = await generateKeyPair("ES256", { extractable: true })
     publicKeyJwk = await exportJWK(publicKey)
     const privateKeyJwk = await exportJWK(privateKey)
-    keyStore.upsertKeyPair({ publicKeyJwk, privateKeyJwk })
+    await keyStore.upsertKeyPair({ publicKeyJwk, privateKeyJwk })
     return { privateKey, publicKey }
   }
 
-  if (keyStore.hasKey) {
-    publicKeyJwk = keyStore.publicKeyJwk
+  if (await keyStore.hasKey()) {
     publicKey = await keyStore.publicKey()
     privateKey = await keyStore.privateKey()
     keyFound = publicKey.type !== 'undefined' && privateKey.type !== 'undefined'
@@ -90,11 +92,11 @@ async function doExtractKeys(keyStore: KeyStore): Promise<{ privateKey: KeyLike,
     keyFound = publicKey.type !== 'undefined' && privateKey.type !== 'undefined'
   }
 
-  if (!keyFound) {
+  if (!keyFound || !publicKeyJwk) {
     throw new Error('Could not extract key pair.')
   }
 
-  did = EbsiWallet.createDid("NATURAL_PERSON", keyStore.publicKeyJwk)
+  did = EbsiWallet.createDid("NATURAL_PERSON", publicKeyJwk)
 
   return { publicKey, privateKey, did }
 }

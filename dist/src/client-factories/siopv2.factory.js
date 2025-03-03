@@ -11,7 +11,7 @@ import { SignJWT } from "jose";
 import { OauthError } from "../oauth-responses";
 import { KeyStore, extractKeys } from '../key-store';
 import { STATE_KEY, NONCE_KEY } from '../constants';
-export function createSiopv2Client({ oauth, window }) {
+export function createSiopv2Client({ oauth, window, storage }) {
     return class Siopv2 {
         constructor({ clientId, redirectUri, responseType, scope }) {
             this.oauth = oauth;
@@ -19,7 +19,7 @@ export function createSiopv2Client({ oauth, window }) {
             this.redirectUri = redirectUri;
             this.scope = scope || '';
             this.responseType = responseType || 'code';
-            this.keyStore = new KeyStore(window);
+            this.keyStore = new KeyStore(window, storage);
         }
         parseSiopv2Response(location) {
             return __awaiter(this, void 0, void 0, function* () {

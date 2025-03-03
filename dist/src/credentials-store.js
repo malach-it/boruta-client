@@ -10,8 +10,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 import { decodeSdJwt } from '@sd-jwt/decode';
 const CREDENTIALS_KEY = 'boruta-client_credentials';
 export class CredentialsStore {
-    constructor(window) {
+    constructor(window, storage) {
         this.window = window;
+        this.storage = storage;
     }
     insertCredential(credentialId, credentialResponse) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -25,9 +26,9 @@ export class CredentialsStore {
     }
     doInsertCredential(credentialId, credentialResponse) {
         return __awaiter(this, void 0, void 0, function* () {
-            const credentials = this.credentials;
+            const credentials = yield this.credentials();
             credentials.push(yield Credential.fromResponse(credentialId, credentialResponse));
-            this.window.localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(credentials));
+            yield this.storage.store(CREDENTIALS_KEY, credentials);
             return credentials;
         });
     }
@@ -36,24 +37,32 @@ export class CredentialsStore {
             this.window.dispatchEvent(new Event('delete_credential-request~' + credential));
             return new Promise((resolve) => {
                 this.window.addEventListener('delete_credential-approval~' + credential, () => {
-                    return resolve(this.doDeleteCredential(credential));
+                    return this.doDeleteCredential(credential).then(resolve);
                 });
             });
         });
     }
     doDeleteCredential(credential) {
-        const credentials = this.credentials;
-        const toDelete = credentials.find((e) => {
-            return e.credential == credential;
-        });
-        if (!toDelete)
+        return __awaiter(this, void 0, void 0, function* () {
+            const credentials = yield this.credentials();
+            const toDelete = credentials.find((e) => {
+                return e.credential == credential;
+            });
+            if (!toDelete)
+                return credentials;
+            credentials.splice(credentials.indexOf(toDelete), 1);
+            yield this.storage.store(CREDENTIALS_KEY, credentials);
             return credentials;
-        credentials.splice(credentials.indexOf(toDelete), 1);
-        this.window.localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(credentials));
-        return credentials;
+        });
     }
-    get credentials() {
-        return JSON.parse(this.window.localStorage.getItem(CREDENTIALS_KEY) || '[]').map((credential) => new Credential(credential));
+    credentials() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.storage.get(CREDENTIALS_KEY).then(credentials => {
+                if (!credentials)
+                    return [];
+                return credentials.map((credential) => new Credential(credential));
+            });
+        });
     }
 }
 export class Credential {

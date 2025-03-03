@@ -4,10 +4,12 @@ import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, PreauthorizedCodeSuccess, TokenSuccess, CredentialSuccess } from "../oauth-responses"
 import { KeyStore, extractKeys } from '../key-store'
 import { CredentialsStore } from '../credentials-store'
+import { Storage } from '../storage'
 
 export type VerifiableCredentialsIssuanceFactoryParams =  {
   oauth: BorutaOauth
   window: Window
+  storage: Storage
 }
 
 export type VerifiableCredentialsIssuanceParams =  {
@@ -18,7 +20,7 @@ export type VerifiableCredentialsIssuanceParams =  {
   scope?: string
 }
 
-export function createVerifiableCredentialsIssuanceClient({ oauth, window }: VerifiableCredentialsIssuanceFactoryParams) {
+export function createVerifiableCredentialsIssuanceClient({ oauth, window, storage }: VerifiableCredentialsIssuanceFactoryParams) {
   return class VerifiableCredentialsIssuance {
     oauth: BorutaOauth
     grantType: string
@@ -37,8 +39,8 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }: Ver
       this.redirectUri = redirectUri
       this.grantType = grantType || 'urn:ietf:params:oauth:grant-type:pre-authorized_code'
       this.scope = scope || ''
-      this.keyStore = new KeyStore(window)
-      this.credentialsStore = new CredentialsStore(window)
+      this.keyStore = new KeyStore(window, storage)
+      this.credentialsStore = new CredentialsStore(window, storage)
     }
 
     async parsePreauthorizedCodeResponse(location: Location): Promise<PreauthorizedCodeSuccess> {
