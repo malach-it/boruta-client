@@ -61,10 +61,8 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }: Ver
       }
     }
 
-    getToken (preauthorizedCode: string): Promise<TokenSuccess> {
-      // TODO throw an error in case of misconfiguration (tokenPath)
-      const { oauth: { api, tokenPath = '' } } = this
-      const body = {
+    async getTokenParams (preauthorizedCode: string) {
+      return {
         grant_type: this.grantType,
         client_id: this.clientId,
         client_secret: this.clientSecret,
@@ -72,6 +70,12 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }: Ver
         'pre-authorized_code': preauthorizedCode,
         scope: this.scope
       }
+    }
+
+    async getToken (preauthorizedCode: string): Promise<TokenSuccess> {
+      // TODO throw an error in case of misconfiguration (tokenPath)
+      const { oauth: { api, tokenPath = '' } } = this
+      const body = await this.getTokenParams(preauthorizedCode)
 
       return api.post<TokenSuccess>(tokenPath, body).then(({ data }) => {
         return data
@@ -80,11 +84,8 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }: Ver
       })
     }
 
-    async getCredential ({
-      access_token: accessToken,
-    }: TokenSuccess, credentialIdentifier: string, format: string) {
-      const { oauth: { api, credentialPath = '' } } = this
-      const { privateKey, did } = await extractKeys(this.keyStore, accessToken)
+    async getCredentialParams (eventKey: string, credentialIdentifier: string, format: string) {
+      const { privateKey, did } = await extractKeys(this.keyStore, eventKey)
 
       const proofJwt = await new SignJWT({
         iat: (Date.now() / 1000),
@@ -98,11 +99,18 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }: Ver
         jwt: proofJwt
       }
 
-      const body = {
+      return {
         credential_identifier: credentialIdentifier,
         format,
         proof
       }
+    }
+
+    async getCredential ({
+      access_token: accessToken,
+    }: TokenSuccess, credentialIdentifier: string, format: string) {
+      const { oauth: { api, credentialPath = '' } } = this
+      const body = await this.getCredentialParams(accessToken, credentialIdentifier, format)
 
       return api.post<CredentialSuccess>(credentialPath, body, {
         headers: {

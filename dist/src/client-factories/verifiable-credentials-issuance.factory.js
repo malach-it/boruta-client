@@ -39,27 +39,33 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }) {
                 };
             });
         }
-        getToken(preauthorizedCode) {
-            // TODO throw an error in case of misconfiguration (tokenPath)
-            const { oauth: { api, tokenPath = '' } } = this;
-            const body = {
-                grant_type: this.grantType,
-                client_id: this.clientId,
-                client_secret: this.clientSecret,
-                redirect_uri: this.redirectUri,
-                'pre-authorized_code': preauthorizedCode,
-                scope: this.scope
-            };
-            return api.post(tokenPath, body).then(({ data }) => {
-                return data;
-            }).catch(({ status, response }) => {
-                throw new OauthError(Object.assign({ status }, response.data));
+        getTokenParams(preauthorizedCode) {
+            return __awaiter(this, void 0, void 0, function* () {
+                return {
+                    grant_type: this.grantType,
+                    client_id: this.clientId,
+                    client_secret: this.clientSecret,
+                    redirect_uri: this.redirectUri,
+                    'pre-authorized_code': preauthorizedCode,
+                    scope: this.scope
+                };
             });
         }
-        getCredential(_a, credentialIdentifier_1, format_1) {
-            return __awaiter(this, arguments, void 0, function* ({ access_token: accessToken, }, credentialIdentifier, format) {
-                const { oauth: { api, credentialPath = '' } } = this;
-                const { privateKey, did } = yield extractKeys(this.keyStore, accessToken);
+        getToken(preauthorizedCode) {
+            return __awaiter(this, void 0, void 0, function* () {
+                // TODO throw an error in case of misconfiguration (tokenPath)
+                const { oauth: { api, tokenPath = '' } } = this;
+                const body = yield this.getTokenParams(preauthorizedCode);
+                return api.post(tokenPath, body).then(({ data }) => {
+                    return data;
+                }).catch(({ status, response }) => {
+                    throw new OauthError(Object.assign({ status }, response.data));
+                });
+            });
+        }
+        getCredentialParams(eventKey, credentialIdentifier, format) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const { privateKey, did } = yield extractKeys(this.keyStore, eventKey);
                 const proofJwt = yield new SignJWT({
                     iat: (Date.now() / 1000),
                     aud: this.oauth.host
@@ -70,11 +76,17 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window }) {
                     proof_type: 'jwt',
                     jwt: proofJwt
                 };
-                const body = {
+                return {
                     credential_identifier: credentialIdentifier,
                     format,
                     proof
                 };
+            });
+        }
+        getCredential(_a, credentialIdentifier_1, format_1) {
+            return __awaiter(this, arguments, void 0, function* ({ access_token: accessToken, }, credentialIdentifier, format) {
+                const { oauth: { api, credentialPath = '' } } = this;
+                const body = yield this.getCredentialParams(accessToken, credentialIdentifier, format);
                 return api.post(credentialPath, body, {
                     headers: {
                         'Authorization': `Bearer ${accessToken}`
