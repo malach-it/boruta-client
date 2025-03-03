@@ -5,10 +5,11 @@ import { OauthError, PreauthorizedCodeSuccess, TokenSuccess, CredentialSuccess }
 import { KeyStore, extractKeys } from '../key-store'
 import { CredentialsStore } from '../credentials-store'
 import { Storage } from '../storage'
+import { EventHandler } from '../event-handler'
 
 export type VerifiableCredentialsIssuanceFactoryParams =  {
   oauth: BorutaOauth
-  window: Window
+  eventHandler: EventHandler
   storage: Storage
 }
 
@@ -20,7 +21,7 @@ export type VerifiableCredentialsIssuanceParams =  {
   scope?: string
 }
 
-export function createVerifiableCredentialsIssuanceClient({ oauth, window, storage }: VerifiableCredentialsIssuanceFactoryParams) {
+export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler, storage }: VerifiableCredentialsIssuanceFactoryParams) {
   return class VerifiableCredentialsIssuance {
     oauth: BorutaOauth
     grantType: string
@@ -39,8 +40,8 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window, stora
       this.redirectUri = redirectUri
       this.grantType = grantType || 'urn:ietf:params:oauth:grant-type:pre-authorized_code'
       this.scope = scope || ''
-      this.keyStore = new KeyStore(window, storage)
-      this.credentialsStore = new CredentialsStore(window, storage)
+      this.keyStore = new KeyStore(eventHandler, storage)
+      this.credentialsStore = new CredentialsStore(eventHandler, storage)
     }
 
     async parsePreauthorizedCodeResponse(location: Location): Promise<PreauthorizedCodeSuccess> {
@@ -122,8 +123,9 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, window, stora
         return data
       }).catch(({ status, response }) => {
         throw new OauthError({ status, ...response.data })
-      }).then(response => {
-        return this.credentialsStore.insertCredential(credentialIdentifier, response)
+      }).then(async response => {
+        await this.credentialsStore.insertCredential(credentialIdentifier, response)
+        return response
       })
     }
   }

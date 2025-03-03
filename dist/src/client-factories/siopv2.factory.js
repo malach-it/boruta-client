@@ -11,7 +11,7 @@ import { SignJWT } from "jose";
 import { OauthError } from "../oauth-responses";
 import { KeyStore, extractKeys } from '../key-store';
 import { STATE_KEY, NONCE_KEY } from '../constants';
-export function createSiopv2Client({ oauth, window, storage }) {
+export function createSiopv2Client({ oauth, window, eventHandler, storage }) {
     return class Siopv2 {
         constructor({ clientId, redirectUri, responseType, scope }) {
             this.oauth = oauth;
@@ -19,7 +19,7 @@ export function createSiopv2Client({ oauth, window, storage }) {
             this.redirectUri = redirectUri;
             this.scope = scope || '';
             this.responseType = responseType || 'code';
-            this.keyStore = new KeyStore(window, storage);
+            this.keyStore = new KeyStore(eventHandler, storage);
         }
         parseSiopv2Response(location) {
             return __awaiter(this, void 0, void 0, function* () {
@@ -79,13 +79,15 @@ export function createSiopv2Client({ oauth, window, storage }) {
                 };
             });
         }
-        get state() {
-            const current = window.localStorage.getItem(STATE_KEY);
-            if (current)
-                return current;
-            const state = (Math.random() + 1).toString(36).substring(4);
-            window.localStorage.setItem(STATE_KEY, state);
-            return state;
+        state() {
+            return __awaiter(this, void 0, void 0, function* () {
+                const current = yield storage.get(STATE_KEY);
+                if (current)
+                    return current;
+                const state = (Math.random() + 1).toString(36).substring(4);
+                yield storage.store(STATE_KEY, state);
+                return state;
+            });
         }
         get nonce() {
             const current = window.localStorage.getItem(NONCE_KEY);
@@ -95,28 +97,33 @@ export function createSiopv2Client({ oauth, window, storage }) {
             window.localStorage.setItem(NONCE_KEY, nonce);
             return nonce;
         }
-        get loginUrl() {
-            return this.buildLoginUrl().toString();
+        loginUrl() {
+            return __awaiter(this, void 0, void 0, function* () {
+                const url = yield this.buildLoginUrl();
+                return url.toString();
+            });
         }
         buildLoginUrl() {
-            // TODO throw an error in case of misconfiguration (host, authorizePath)
-            const url = new URL(oauth.host);
-            url.pathname = oauth.authorizePath || '';
-            const queryParams = {
-                'client_id': this.clientId,
-                'redirect_uri': this.redirectUri,
-                'scope': this.scope,
-                'response_type': this.responseType,
-                'client_metadata': '{}',
-                'state': this.state,
-                'nonce': this.nonce
-            };
-            Object.entries(queryParams).forEach(([param, value]) => {
-                if (!value)
-                    return;
-                url.searchParams.append(param, value);
+            return __awaiter(this, void 0, void 0, function* () {
+                // TODO throw an error in case of misconfiguration (host, authorizePath)
+                const url = new URL(oauth.host);
+                url.pathname = oauth.authorizePath || '';
+                const queryParams = {
+                    'client_id': this.clientId,
+                    'redirect_uri': this.redirectUri,
+                    'scope': this.scope,
+                    'response_type': this.responseType,
+                    'client_metadata': '{}',
+                    'state': yield this.state(),
+                    'nonce': this.nonce
+                };
+                Object.entries(queryParams).forEach(([param, value]) => {
+                    if (!value)
+                        return;
+                    url.searchParams.append(param, value);
+                });
+                return url;
             });
-            return url;
         }
     };
 }

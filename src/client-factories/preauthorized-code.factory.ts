@@ -1,10 +1,12 @@
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, PreauthorizedCodeSuccess, TokenSuccess } from "../oauth-responses"
+import { Storage } from '../storage'
 
 const STATE_KEY = 'boruta_state'
 
 export type PreauthorizedCodeFactoryParams =  {
   oauth: BorutaOauth
+  storage: Storage
   window: Window
 }
 
@@ -43,7 +45,7 @@ class StateError extends Error {
   }
 }
 
-export function createPreauthorizedCodeClient({ oauth, window }: PreauthorizedCodeFactoryParams) {
+export function createPreauthorizedCodeClient({ oauth, window, storage }: PreauthorizedCodeFactoryParams) {
   return class PreauthorizedCode {
     oauth: BorutaOauth
     clientId: string
@@ -62,12 +64,12 @@ export function createPreauthorizedCodeClient({ oauth, window }: PreauthorizedCo
       this.scope = scope || ''
     }
 
-    get state() {
-      const current = window.localStorage.getItem(STATE_KEY)
+    async state() {
+      const current = storage.get<string>(STATE_KEY)
       if (current) return current
 
       const state = (Math.random() + 1).toString(36).substring(4)
-      window.localStorage.setItem(STATE_KEY, state)
+      storage.store(STATE_KEY, state)
       return state
     }
 
@@ -98,7 +100,7 @@ export function createPreauthorizedCodeClient({ oauth, window }: PreauthorizedCo
       return this.parseLocation(window.location)
     }
 
-    buildLoginUrl(extraParams: Partial<PreauthorizedCodeExtraParams> = {}): URL {
+    async buildLoginUrl(extraParams: Partial<PreauthorizedCodeExtraParams> = {}): Promise<URL> {
       // TODO throw an error in case of misconfiguration (host, authorizePath)
       const url = new URL(oauth.host)
       url.pathname = oauth.authorizePath || ''
@@ -108,7 +110,7 @@ export function createPreauthorizedCodeClient({ oauth, window }: PreauthorizedCo
         'redirect_uri': this.redirectUri,
         'scope': this.scope,
         'response_type': this.responseType,
-        'state': this.state,
+        'state': await this.state(),
         ...extraParams
       }
 

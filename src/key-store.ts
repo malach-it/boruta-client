@@ -2,14 +2,15 @@ import { EbsiWallet } from "@cef-ebsi/wallet-lib"
 import { exportJWK, exportPKCS8, importJWK, generateKeyPair, KeyLike, JWK } from "jose"
 import { PUBLIC_KEY_STORAGE_KEY, PRIVATE_KEY_STORAGE_KEY } from './constants'
 import { Storage } from './storage'
+import { EventHandler } from './event-handler'
 
 export class KeyStore {
   storage: Storage
-  window: Window
+  eventHandler: EventHandler
 
-  constructor (window: Window, storage: Storage) {
+  constructor (eventHandler: EventHandler, storage: Storage) {
     this.storage = storage
-    this.window = window
+    this.eventHandler = eventHandler
   }
 
   async hasKey () {
@@ -55,11 +56,11 @@ export class KeyStore {
 }
 
 export async function extractKeys(keyStore: KeyStore, eventKey: string): Promise<{ privateKey: KeyLike, publicKey: KeyLike, did: string }> {
-  keyStore.window.dispatchEvent(new Event('extract_key-request~' + eventKey))
+  keyStore.eventHandler.dispatch('extract_key-request', eventKey)
 
-  return new Promise((resolve) => {
-    keyStore.window.addEventListener('extract_key-approval~' + eventKey, () => {
-      return doExtractKeys(keyStore).then(resolve)
+  return new Promise((resolve, reject) => {
+    keyStore.eventHandler.listen('extract_key-approval', eventKey, () => {
+      return doExtractKeys(keyStore).then(resolve).catch(reject)
     })
   })
 }

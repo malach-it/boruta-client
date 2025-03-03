@@ -11,9 +11,9 @@ import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { exportJWK, importJWK, generateKeyPair } from "jose";
 import { PUBLIC_KEY_STORAGE_KEY, PRIVATE_KEY_STORAGE_KEY } from './constants';
 export class KeyStore {
-    constructor(window, storage) {
+    constructor(eventHandler, storage) {
         this.storage = storage;
-        this.window = window;
+        this.eventHandler = eventHandler;
     }
     hasKey() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -63,10 +63,10 @@ export class KeyStore {
 }
 export function extractKeys(keyStore, eventKey) {
     return __awaiter(this, void 0, void 0, function* () {
-        keyStore.window.dispatchEvent(new Event('extract_key-request~' + eventKey));
-        return new Promise((resolve) => {
-            keyStore.window.addEventListener('extract_key-approval~' + eventKey, () => {
-                return doExtractKeys(keyStore).then(resolve);
+        keyStore.eventHandler.dispatch('extract_key-request', eventKey);
+        return new Promise((resolve, reject) => {
+            keyStore.eventHandler.listen('extract_key-approval', eventKey, () => {
+                return doExtractKeys(keyStore).then(resolve).catch(reject);
             });
         });
     });

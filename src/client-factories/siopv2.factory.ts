@@ -4,10 +4,12 @@ import { OauthError, Siopv2Success } from "../oauth-responses"
 import { KeyStore, extractKeys } from '../key-store'
 import { STATE_KEY, NONCE_KEY } from '../constants'
 import { Storage } from '../storage'
+import { EventHandler } from '../event-handler'
 
 export type Siopv2FactoryParams =  {
   oauth: BorutaOauth
   window: Window
+  eventHandler: EventHandler
   storage: Storage
 }
 
@@ -18,7 +20,7 @@ export type Siopv2Params =  {
   responseType?: string
 }
 
-export function createSiopv2Client({ oauth, window, storage }: Siopv2FactoryParams) {
+export function createSiopv2Client({ oauth, window, eventHandler, storage }: Siopv2FactoryParams) {
   return class Siopv2 {
     oauth: BorutaOauth
     publicKey?: any
@@ -37,7 +39,7 @@ export function createSiopv2Client({ oauth, window, storage }: Siopv2FactoryPara
       this.redirectUri = redirectUri
       this.scope = scope || ''
       this.responseType = responseType || 'code'
-      this.keyStore = new KeyStore(window, storage)
+      this.keyStore = new KeyStore(eventHandler, storage)
     }
 
     async parseSiopv2Response(location: Location): Promise<Siopv2Success> {
@@ -112,12 +114,13 @@ export function createSiopv2Client({ oauth, window, storage }: Siopv2FactoryPara
       }
     }
 
-    get state() {
-      const current = window.localStorage.getItem(STATE_KEY)
+    async state() {
+      const current = await storage.get<string>(STATE_KEY)
       if (current) return current
 
       const state = (Math.random() + 1).toString(36).substring(4)
-      window.localStorage.setItem(STATE_KEY, state)
+      await storage.store(STATE_KEY, state)
+
       return state
     }
 
@@ -130,11 +133,12 @@ export function createSiopv2Client({ oauth, window, storage }: Siopv2FactoryPara
       return nonce
     }
 
-    get loginUrl(): string {
-      return this.buildLoginUrl().toString()
+    async loginUrl(): Promise<string> {
+      const url = await this.buildLoginUrl()
+      return url.toString()
     }
 
-    private buildLoginUrl(): URL {
+    private async buildLoginUrl(): Promise<URL> {
       // TODO throw an error in case of misconfiguration (host, authorizePath)
       const url = new URL(oauth.host)
       url.pathname = oauth.authorizePath || ''
@@ -145,7 +149,7 @@ export function createSiopv2Client({ oauth, window, storage }: Siopv2FactoryPara
         'scope': this.scope,
         'response_type': this.responseType,
         'client_metadata': '{}',
-        'state': this.state,
+        'state': await this.state(),
         'nonce': this.nonce
       }
 

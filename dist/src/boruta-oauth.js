@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { createPreauthorizedCodeClient, createClientCredentialsClient, createImplicitClient, createRevokeClient, createSiopv2Client, createVerifiableCredentialsIssuanceClient } from './client-factories';
 export class BorutaOauth {
-    constructor({ host, authorizePath, tokenPath, credentialPath, revokePath, jwksPath, window, storage }) {
+    constructor({ host, authorizePath, tokenPath, credentialPath, revokePath, jwksPath, window, storage, eventHandler }) {
         this.window = window;
         this.storage = storage;
+        this.eventHandler = eventHandler;
         this.host = host;
         this.tokenPath = tokenPath;
         this.credentialPath = credentialPath;
@@ -24,10 +25,16 @@ export class BorutaOauth {
         if (!this.storage) {
             throw new Error('You must specify a storage to build this client type.');
         }
-        return createVerifiableCredentialsIssuanceClient({ oauth: this, window: this.window, storage: this.storage });
+        if (!this.eventHandler) {
+            throw new Error('You must specify a eventHandler to build this client type.');
+        }
+        return createVerifiableCredentialsIssuanceClient({ oauth: this, eventHandler: this.eventHandler, storage: this.storage });
     }
     get PreauthorizedCode() {
-        return createPreauthorizedCodeClient({ oauth: this, window: this.window });
+        if (!this.storage) {
+            throw new Error('You must specify a storage to build this client type.');
+        }
+        return createPreauthorizedCodeClient({ oauth: this, window: this.window, storage: this.storage });
     }
     get Implicit() {
         return createImplicitClient({ oauth: this, window: this.window });
@@ -39,6 +46,9 @@ export class BorutaOauth {
         if (!this.storage) {
             throw new Error('You must specify a storage to build this client type.');
         }
-        return createSiopv2Client({ oauth: this, window: this.window, storage: this.storage });
+        if (!this.eventHandler) {
+            throw new Error('You must specify a eventHandler to build this client type.');
+        }
+        return createSiopv2Client({ oauth: this, window: this.window, eventHandler: this.eventHandler, storage: this.storage });
     }
 }

@@ -19,7 +19,7 @@ class StateError extends Error {
         return this.error_description;
     }
 }
-export function createPreauthorizedCodeClient({ oauth, window }) {
+export function createPreauthorizedCodeClient({ oauth, window, storage }) {
     return class PreauthorizedCode {
         constructor({ clientId, redirectUri, clientSecret, scope }) {
             this.responseType = 'urn:ietf:params:oauth:response-type:pre-authorized_code';
@@ -30,13 +30,15 @@ export function createPreauthorizedCodeClient({ oauth, window }) {
             this.clientSecret = clientSecret;
             this.scope = scope || '';
         }
-        get state() {
-            const current = window.localStorage.getItem(STATE_KEY);
-            if (current)
-                return current;
-            const state = (Math.random() + 1).toString(36).substring(4);
-            window.localStorage.setItem(STATE_KEY, state);
-            return state;
+        state() {
+            return __awaiter(this, void 0, void 0, function* () {
+                const current = storage.get(STATE_KEY);
+                if (current)
+                    return current;
+                const state = (Math.random() + 1).toString(36).substring(4);
+                storage.store(STATE_KEY, state);
+                return state;
+            });
         }
         get loginUrl() {
             return this.buildLoginUrl().toString();
@@ -61,17 +63,19 @@ export function createPreauthorizedCodeClient({ oauth, window }) {
                 return this.parseLocation(window.location);
             });
         }
-        buildLoginUrl(extraParams = {}) {
-            // TODO throw an error in case of misconfiguration (host, authorizePath)
-            const url = new URL(oauth.host);
-            url.pathname = oauth.authorizePath || '';
-            const queryParams = Object.assign({ 'client_id': this.clientId, 'redirect_uri': this.redirectUri, 'scope': this.scope, 'response_type': this.responseType, 'state': this.state }, extraParams);
-            Object.entries(queryParams).forEach(([param, value]) => {
-                if (!value)
-                    return;
-                url.searchParams.append(param, value);
+        buildLoginUrl() {
+            return __awaiter(this, arguments, void 0, function* (extraParams = {}) {
+                // TODO throw an error in case of misconfiguration (host, authorizePath)
+                const url = new URL(oauth.host);
+                url.pathname = oauth.authorizePath || '';
+                const queryParams = Object.assign({ 'client_id': this.clientId, 'redirect_uri': this.redirectUri, 'scope': this.scope, 'response_type': this.responseType, 'state': yield this.state() }, extraParams);
+                Object.entries(queryParams).forEach(([param, value]) => {
+                    if (!value)
+                        return;
+                    url.searchParams.append(param, value);
+                });
+                return url;
             });
-            return url;
         }
         getToken() {
             if (!this.credentialOffer) {

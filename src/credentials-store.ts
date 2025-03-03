@@ -2,24 +2,25 @@ import { decodeSdJwt } from '@sd-jwt/decode'
 
 import { CredentialSuccess } from './oauth-responses'
 import { Storage } from './storage'
+import { EventHandler } from './event-handler'
 
 const CREDENTIALS_KEY = 'boruta-client_credentials'
 
 export class CredentialsStore {
-  window: Window
+  eventHandler: EventHandler
   storage: Storage
 
-  constructor (window: Window, storage: Storage) {
-    this.window = window
+  constructor (eventHandler: EventHandler, storage: Storage) {
+    this.eventHandler = eventHandler
     this.storage = storage
   }
 
   async insertCredential(credentialId: string, credentialResponse: CredentialSuccess): Promise<Array<Credential>> {
-    this.window.dispatchEvent(new Event('insert_credential-request~' + credentialId))
+    this.eventHandler.dispatch('insert_credential-request', credentialId)
 
-    return new Promise((resolve) => {
-      this.window.addEventListener('insert_credential-approval~' + credentialId, () => {
-        return this.doInsertCredential(credentialId, credentialResponse).then(resolve)
+    return new Promise((resolve, reject) => {
+      this.eventHandler.listen('insert_credential-approval', credentialId, () => {
+        return this.doInsertCredential(credentialId, credentialResponse).then(resolve).catch(reject)
       })
     })
   }
@@ -35,11 +36,11 @@ export class CredentialsStore {
   }
 
   async deleteCredential(credential: string): Promise<Array<Credential>> {
-    this.window.dispatchEvent(new Event('delete_credential-request~' + credential))
+    this.eventHandler.dispatch('delete_credential-request', credential)
 
-    return new Promise((resolve) => {
-      this.window.addEventListener('delete_credential-approval~' + credential, () => {
-        return this.doDeleteCredential(credential).then(resolve)
+    return new Promise((resolve, reject) => {
+      this.eventHandler.listen('delete_credential-approval', credential, () => {
+        return this.doDeleteCredential(credential).then(resolve).catch(reject)
       })
     })
   }

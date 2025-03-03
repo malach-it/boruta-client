@@ -10,16 +10,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 import { decodeSdJwt } from '@sd-jwt/decode';
 const CREDENTIALS_KEY = 'boruta-client_credentials';
 export class CredentialsStore {
-    constructor(window, storage) {
-        this.window = window;
+    constructor(eventHandler, storage) {
+        this.eventHandler = eventHandler;
         this.storage = storage;
     }
     insertCredential(credentialId, credentialResponse) {
         return __awaiter(this, void 0, void 0, function* () {
-            this.window.dispatchEvent(new Event('insert_credential-request~' + credentialId));
-            return new Promise((resolve) => {
-                this.window.addEventListener('insert_credential-approval~' + credentialId, () => {
-                    return this.doInsertCredential(credentialId, credentialResponse).then(resolve);
+            this.eventHandler.dispatch('insert_credential-request', credentialId);
+            return new Promise((resolve, reject) => {
+                this.eventHandler.listen('insert_credential-approval', credentialId, () => {
+                    return this.doInsertCredential(credentialId, credentialResponse).then(resolve).catch(reject);
                 });
             });
         });
@@ -34,10 +34,10 @@ export class CredentialsStore {
     }
     deleteCredential(credential) {
         return __awaiter(this, void 0, void 0, function* () {
-            this.window.dispatchEvent(new Event('delete_credential-request~' + credential));
-            return new Promise((resolve) => {
-                this.window.addEventListener('delete_credential-approval~' + credential, () => {
-                    return this.doDeleteCredential(credential).then(resolve);
+            this.eventHandler.dispatch('delete_credential-request', credential);
+            return new Promise((resolve, reject) => {
+                this.eventHandler.listen('delete_credential-approval', credential, () => {
+                    return this.doDeleteCredential(credential).then(resolve).catch(reject);
                 });
             });
         });
