@@ -11,7 +11,7 @@ import { SignJWT } from "jose";
 import { OauthError } from "../oauth-responses";
 import { KeyStore, extractKeys } from '../key-store';
 import { STATE_KEY, NONCE_KEY } from '../constants';
-export function createSiopv2Client({ oauth, window, eventHandler, storage }) {
+export function createSiopv2Client({ oauth, eventHandler, storage }) {
     return class Siopv2 {
         constructor({ clientId, redirectUri, responseType, scope }) {
             this.oauth = oauth;
@@ -89,13 +89,15 @@ export function createSiopv2Client({ oauth, window, eventHandler, storage }) {
                 return state;
             });
         }
-        get nonce() {
-            const current = window.localStorage.getItem(NONCE_KEY);
-            if (current)
-                return current;
-            const nonce = (Math.random() + 1).toString(36).substring(4);
-            window.localStorage.setItem(NONCE_KEY, nonce);
-            return nonce;
+        nonce() {
+            return __awaiter(this, void 0, void 0, function* () {
+                const current = yield storage.get(NONCE_KEY);
+                if (current)
+                    return current;
+                const nonce = (Math.random() + 1).toString(36).substring(4);
+                yield storage.store(NONCE_KEY, nonce);
+                return nonce;
+            });
         }
         loginUrl() {
             return __awaiter(this, void 0, void 0, function* () {

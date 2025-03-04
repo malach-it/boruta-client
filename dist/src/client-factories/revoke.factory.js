@@ -1,5 +1,5 @@
 import { OauthError } from "../oauth-responses";
-export function createRevokeClient({ oauth, window }) {
+export function createRevokeClient({ oauth }) {
     return class Revoke {
         constructor({ clientId, clientSecret }) {
             this.oauth = oauth;

@@ -19,7 +19,7 @@ class StateError extends Error {
         return this.error_description;
     }
 }
-export function createPreauthorizedCodeClient({ oauth, window, storage }) {
+export function createPreauthorizedCodeClient({ oauth, storage }) {
     return class PreauthorizedCode {
         constructor({ clientId, redirectUri, clientSecret, scope }) {
             this.responseType = 'urn:ietf:params:oauth:response-type:pre-authorized_code';
@@ -44,7 +44,7 @@ export function createPreauthorizedCodeClient({ oauth, window, storage }) {
             return this.buildLoginUrl().toString();
         }
         parseLocation(location) {
-            const urlSearchParams = new URLSearchParams(window.location.search);
+            const urlSearchParams = new URLSearchParams(location.search);
             const credentialOffer = urlSearchParams.get('credential_offer') || '';
             if (credentialOffer) {
                 this.credentialOffer = JSON.parse(credentialOffer);
@@ -57,11 +57,6 @@ export function createPreauthorizedCodeClient({ oauth, window, storage }) {
                 error_description
             });
             return Promise.reject(response);
-        }
-        callback() {
-            return __awaiter(this, void 0, void 0, function* () {
-                return this.parseLocation(window.location);
-            });
         }
         buildLoginUrl() {
             return __awaiter(this, arguments, void 0, function* (extraParams = {}) {

@@ -34,13 +34,16 @@ export class BorutaOauth {
         if (!this.storage) {
             throw new Error('You must specify a storage to build this client type.');
         }
-        return createPreauthorizedCodeClient({ oauth: this, window: this.window, storage: this.storage });
+        return createPreauthorizedCodeClient({ oauth: this, storage: this.storage });
     }
     get Implicit() {
+        if (!this.window) {
+            throw new Error('You must specify a window to build this client type.');
+        }
         return createImplicitClient({ oauth: this, window: this.window });
     }
     get Revoke() {
-        return createRevokeClient({ oauth: this, window: this.window });
+        return createRevokeClient({ oauth: this });
     }
     get Siopv2() {
         if (!this.storage) {
@@ -49,6 +52,6 @@ export class BorutaOauth {
         if (!this.eventHandler) {
             throw new Error('You must specify a eventHandler to build this client type.');
         }
-        return createSiopv2Client({ oauth: this, window: this.window, eventHandler: this.eventHandler, storage: this.storage });
+        return createSiopv2Client({ oauth: this, eventHandler: this.eventHandler, storage: this.storage });
     }
 }

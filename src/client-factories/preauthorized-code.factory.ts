@@ -7,7 +7,6 @@ const STATE_KEY = 'boruta_state'
 export type PreauthorizedCodeFactoryParams =  {
   oauth: BorutaOauth
   storage: Storage
-  window: Window
 }
 
 export type PreauthorizedCodeParams = {
@@ -45,7 +44,7 @@ class StateError extends Error {
   }
 }
 
-export function createPreauthorizedCodeClient({ oauth, window, storage }: PreauthorizedCodeFactoryParams) {
+export function createPreauthorizedCodeClient({ oauth, storage }: PreauthorizedCodeFactoryParams) {
   return class PreauthorizedCode {
     oauth: BorutaOauth
     clientId: string
@@ -78,7 +77,7 @@ export function createPreauthorizedCodeClient({ oauth, window, storage }: Preaut
     }
 
     parseLocation(location: Location): Promise<CredentialOffer | undefined> {
-      const urlSearchParams = new URLSearchParams(window.location.search)
+      const urlSearchParams = new URLSearchParams(location.search)
 
       const credentialOffer = urlSearchParams.get('credential_offer') || ''
       if (credentialOffer) {
@@ -94,10 +93,6 @@ export function createPreauthorizedCodeClient({ oauth, window, storage }: Preaut
       })
 
       return Promise.reject(response)
-    }
-
-    async callback() {
-      return this.parseLocation(window.location)
     }
 
     async buildLoginUrl(extraParams: Partial<PreauthorizedCodeExtraParams> = {}): Promise<URL> {

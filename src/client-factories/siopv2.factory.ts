@@ -8,7 +8,6 @@ import { EventHandler } from '../event-handler'
 
 export type Siopv2FactoryParams =  {
   oauth: BorutaOauth
-  window: Window
   eventHandler: EventHandler
   storage: Storage
 }
@@ -20,7 +19,7 @@ export type Siopv2Params =  {
   responseType?: string
 }
 
-export function createSiopv2Client({ oauth, window, eventHandler, storage }: Siopv2FactoryParams) {
+export function createSiopv2Client({ oauth, eventHandler, storage }: Siopv2FactoryParams) {
   return class Siopv2 {
     oauth: BorutaOauth
     publicKey?: any
@@ -124,12 +123,12 @@ export function createSiopv2Client({ oauth, window, eventHandler, storage }: Sio
       return state
     }
 
-    get nonce() {
-      const current = window.localStorage.getItem(NONCE_KEY)
+    async nonce() {
+      const current = await storage.get<string>(NONCE_KEY)
       if (current) return current
 
       const nonce = (Math.random() + 1).toString(36).substring(4)
-      window.localStorage.setItem(NONCE_KEY, nonce)
+      await storage.store(NONCE_KEY, nonce)
       return nonce
     }
 

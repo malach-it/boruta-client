@@ -4,7 +4,6 @@ import { OauthError } from "../oauth-responses"
 
 export type RevokeFactoryParams =  {
   oauth: BorutaOauth
-  window: Window
 }
 
 export type RevokeParams = {
@@ -18,7 +17,7 @@ export type RevokePostData = {
   client_secret?: string
 }
 
-export function createRevokeClient({ oauth, window }: RevokeFactoryParams) {
+export function createRevokeClient({ oauth }: RevokeFactoryParams) {
   return class Revoke {
     oauth: BorutaOauth
     clientId: string
