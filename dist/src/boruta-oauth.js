@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { createPreauthorizedCodeClient, createClientCredentialsClient, createImplicitClient, createRevokeClient, createSiopv2Client, createVerifiableCredentialsIssuanceClient } from './client-factories';
+import { createPreauthorizedCodeClient, createClientCredentialsClient, createImplicitClient, createRevokeClient, createSiopv2Client, createVerifiablePresentationsClient, createVerifiableCredentialsIssuanceClient } from './client-factories';
 export class BorutaOauth {
     constructor({ host, authorizePath, tokenPath, credentialPath, revokePath, jwksPath, window, storage, eventHandler }) {
         this.window = window;
@@ -53,5 +53,14 @@ export class BorutaOauth {
             throw new Error('You must specify a eventHandler to build this client type.');
         }
         return createSiopv2Client({ oauth: this, eventHandler: this.eventHandler, storage: this.storage });
+    }
+    get VerifiablePresentations() {
+        if (!this.storage) {
+            throw new Error('You must specify a storage to build this client type.');
+        }
+        if (!this.eventHandler) {
+            throw new Error('You must specify a eventHandler to build this client type.');
+        }
+        return createVerifiablePresentationsClient({ oauth: this, eventHandler: this.eventHandler, storage: this.storage });
     }
 }

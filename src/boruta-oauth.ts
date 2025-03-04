@@ -5,6 +5,7 @@ import {
   createImplicitClient,
   createRevokeClient,
   createSiopv2Client,
+  createVerifiablePresentationsClient,
   createVerifiableCredentialsIssuanceClient
 } from './client-factories'
 import { Storage } from './storage'
@@ -102,6 +103,16 @@ export class BorutaOauth {
       throw new Error('You must specify a eventHandler to build this client type.')
     }
     return createSiopv2Client({ oauth: this, eventHandler: this.eventHandler, storage: this.storage })
+  }
+
+  get VerifiablePresentations() {
+    if (!this.storage) {
+      throw new Error('You must specify a storage to build this client type.')
+    }
+    if (!this.eventHandler) {
+      throw new Error('You must specify a eventHandler to build this client type.')
+    }
+    return createVerifiablePresentationsClient({ oauth: this, eventHandler: this.eventHandler, storage: this.storage })
   }
 }
 

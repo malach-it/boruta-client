@@ -66,3 +66,11 @@ export interface Siopv2Success {
   response_type: string
   scope?: string
 }
+
+export interface VerifiablePresentationSuccess {
+  request: string
+  client_id: string
+  redirect_uri: string
+  response_mode?: string
+  response_type: string
+}
