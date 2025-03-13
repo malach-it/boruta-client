@@ -128,6 +128,14 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
 }
 
 function parsePreauthorizedCodeParams(params: URLSearchParams): Promise<PreauthorizedCodeSuccess> {
+  const error = params.get('error')
+  if (error) {
+    const error_description = params.get('error_description') || ''
+    return Promise.reject(new OauthError({
+      error,
+      error_description
+    }))
+  }
   const credential_offer = params.get('credential_offer')
   if (!credential_offer) {
     return Promise.reject(new OauthError({

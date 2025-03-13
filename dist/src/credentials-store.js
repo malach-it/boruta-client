@@ -9,10 +9,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import { decodeSdJwt } from '@sd-jwt/decode';
 import { CREDENTIALS_KEY } from './constants';
+import { KeyStore } from './key-store';
 export class CredentialsStore {
     constructor(eventHandler, storage) {
         this.eventHandler = eventHandler;
         this.storage = storage;
+        this.keyStore = new KeyStore(eventHandler, storage);
     }
     insertCredential(credentialId, credentialResponse) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -65,10 +67,9 @@ export class CredentialsStore {
         });
     }
     presentation(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ input_descriptors }) {
+        return __awaiter(this, arguments, void 0, function* ({ id, input_descriptors }) {
             const credentials = yield this.credentials();
-            const result = { presentationCredentials: [], descriptorMap: [] };
-            return input_descriptors.reduce((acc, descriptor) => {
+            const presentationParams = input_descriptors.reduce((acc, descriptor) => {
                 let index = 0;
                 return credentials.reduce((acc, credential) => {
                     if (credential.validateFormat(Object.keys(descriptor.format))) {
@@ -83,7 +84,6 @@ export class CredentialsStore {
                                         path: `$.verifiableCredential[${index}]`
                                     }
                                 };
-                                console.log(descriptor);
                                 index = index + 1;
                                 return { credential, descriptor };
                             }
@@ -102,17 +102,36 @@ export class CredentialsStore {
                         return acc;
                     }
                 }, acc);
-            }, result);
+            }, { presentationCredentials: [], descriptorMap: [] });
+            return {
+                credentials: presentationParams.presentationCredentials,
+                vp_token: yield this.generateVpToken(presentationParams, 'vp_token~' + id),
+                presentation_submission: yield this.generatePresentationSubmission(presentationParams, 'presentation_submission~' + id)
+            };
         });
     }
-    generateVpToken(presentation_1, _a) {
-        return __awaiter(this, arguments, void 0, function* (presentation, { privateKey }) {
-            return Promise.resolve('');
+    generateVpToken(_a, eventKey_1) {
+        return __awaiter(this, arguments, void 0, function* ({ presentationCredentials }, eventKey) {
+            const payload = {
+                'id': eventKey,
+                '@context': [
+                    'https://www.w3.org/2018/credentials/v1'
+                ],
+                'type': [
+                    'VerifiablePresentation'
+                ],
+                'verifiableCredential': presentationCredentials.map(({ credential }) => credential)
+            };
+            return this.keyStore.sign(payload, eventKey);
         });
     }
-    generatePresentationSubmission(presentation_1, _a) {
-        return __awaiter(this, arguments, void 0, function* (presentation, { privateKey }) {
-            return Promise.resolve('');
+    generatePresentationSubmission(_a, eventKey_1) {
+        return __awaiter(this, arguments, void 0, function* ({ descriptorMap }, eventKey) {
+            const payload = {
+                id: eventKey,
+                descriptor_map: descriptorMap
+            };
+            return this.keyStore.sign(payload, eventKey);
         });
     }
 }

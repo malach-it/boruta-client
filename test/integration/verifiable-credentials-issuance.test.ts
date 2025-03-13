@@ -60,7 +60,7 @@ describe('BorutaOauth', () => {
             .then(() => {
               assert(false)
             }).catch(error => {
-              expect(error.message).to.eq('Could not parse location.')
+              expect(error.message).to.eq('Preauthorized code response location must contain query params.')
             })
         })
       })
@@ -71,7 +71,7 @@ describe('BorutaOauth', () => {
         beforeEach(() => {
           Object.defineProperty(window.location, 'search', {
             writable: true,
-            value: `#error=${error}&error_description=${error_description}`
+            value: `?error=${error}&error_description=${error_description}`
           })
         })
 

@@ -4,9 +4,9 @@ import { CredentialSuccess, PresentationDefinition, InputDescriptor } from './oa
 import { Storage } from './storage'
 import { EventHandler } from './event-handler'
 import { CREDENTIALS_KEY } from './constants'
-import { KeyPair } from './key-store'
+import { KeyStore } from './key-store'
 
-export type PresentationParams = {
+export type PresentationCredentials = {
   credentials: Array<Credential>
   vp_token: string
   presentation_submission: string
@@ -22,18 +22,20 @@ type Descriptor = {
   }
 }
 
-type PresentationResult = {
+type PresentationParams = {
   presentationCredentials: Array<Credential>
   descriptorMap: Array<Descriptor>
 }
 
 export class CredentialsStore {
   eventHandler: EventHandler
+  keyStore: KeyStore
   storage: Storage
 
   constructor (eventHandler: EventHandler, storage: Storage) {
     this.eventHandler = eventHandler
     this.storage = storage
+    this.keyStore = new KeyStore(eventHandler, storage)
   }
 
   async insertCredential(credentialId: string, credentialResponse: CredentialSuccess): Promise<Array<Credential>> {
@@ -91,15 +93,13 @@ export class CredentialsStore {
     })
   }
 
-  async presentation({ input_descriptors }: PresentationDefinition): Promise<PresentationResult> {
+  async presentation({ id, input_descriptors }: PresentationDefinition): Promise<PresentationCredentials> {
     const credentials = await this.credentials()
 
-    const result: PresentationResult = { presentationCredentials: [], descriptorMap: [] }
-
-    return input_descriptors.reduce((acc: PresentationResult, descriptor: InputDescriptor) => {
+    const presentationParams = input_descriptors.reduce((acc: PresentationParams, descriptor: InputDescriptor) => {
       let index = 0
 
-      return credentials.reduce((acc: PresentationResult, credential: Credential) => {
+      return credentials.reduce((acc: PresentationParams, credential: Credential) => {
         if (credential.validateFormat(Object.keys(descriptor.format))) {
           return descriptor.constraints.fields.map((field: { path: string }) => {
             if (
@@ -114,14 +114,13 @@ export class CredentialsStore {
                   path: `$.verifiableCredential[${index}]`
                 }
               }
-              console.log(descriptor)
               index = index + 1
               return { credential, descriptor }
             }
           })
             .filter((e: { credential: Credential, descriptor: Descriptor } | undefined) => e)
             .reduce((
-              acc: PresentationResult,
+              acc: PresentationParams,
               current: { credential: Credential, descriptor: Descriptor } | undefined
             ) => {
               if (!current) return acc
@@ -135,15 +134,35 @@ export class CredentialsStore {
           return acc
         }
       }, acc)
-    }, result)
+    }, { presentationCredentials: [], descriptorMap: [] })
+
+    return {
+      credentials: presentationParams.presentationCredentials,
+      vp_token: await this.generateVpToken(presentationParams, 'vp_token~' + id),
+      presentation_submission: await this.generatePresentationSubmission(presentationParams, 'presentation_submission~' + id)
+    }
   }
 
-  async generateVpToken(presentation: PresentationResult, { privateKey }: KeyPair): Promise<string> {
-    return Promise.resolve('')
+  async generateVpToken({ presentationCredentials }: PresentationParams, eventKey: string): Promise<string> {
+    const payload = {
+      'id': eventKey,
+      '@context': [
+        'https://www.w3.org/2018/credentials/v1'
+      ],
+      'type': [
+        'VerifiablePresentation'
+      ],
+      'verifiableCredential': presentationCredentials.map(({ credential }) => credential)
+    }
+    return this.keyStore.sign(payload, eventKey)
   }
 
-  async generatePresentationSubmission(presentation: PresentationResult, { privateKey }: KeyPair): Promise<string> {
-    return Promise.resolve('')
+  async generatePresentationSubmission({ descriptorMap }: PresentationParams, eventKey: string): Promise<string> {
+    const payload = {
+      id: eventKey,
+      descriptor_map: descriptorMap
+    }
+    return this.keyStore.sign(payload, eventKey)
   }
 }
 

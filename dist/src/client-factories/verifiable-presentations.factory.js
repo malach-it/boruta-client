@@ -32,7 +32,9 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
                 }
                 const params = new URLSearchParams(location.search);
                 const { request, client_id, redirect_uri, response_mode, response_type, } = yield parseVerifiablePresentationsParams(params);
+                const { presentation_definition: { id } } = yield parseVerifiablePresentationRequest(request);
                 return {
+                    id,
                     request,
                     client_id,
                     redirect_uri,
@@ -45,14 +47,8 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
             return __awaiter(this, arguments, void 0, function* ({ request, redirect_uri }) {
                 const { presentation_definition } = yield parseVerifiablePresentationRequest(request);
                 const url = new URL(redirect_uri);
-                console.log(presentation_definition);
                 const presentation = yield this.credentialsStore.presentation(presentation_definition);
-                console.log(presentation);
-                return {
-                    credentials: [],
-                    vp_token: '',
-                    presentation_submission: ''
-                };
+                return Object.assign({ redirect_uri }, presentation);
             });
         }
         state() {

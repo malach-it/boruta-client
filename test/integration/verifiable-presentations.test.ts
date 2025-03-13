@@ -38,7 +38,7 @@ describe('BorutaOauth', () => {
     nock.cleanAll()
   })
 
-  describe.only('VerifiablePresentation client is setup', () => {
+  describe('VerifiablePresentation client is setup', () => {
     const clientId = 'clientId'
     const redirectUri = 'http://redirect.uri'
     const client = new oauth.VerifiablePresentations({ clientId, redirectUri })
@@ -82,13 +82,25 @@ describe('BorutaOauth', () => {
             .reply(400, { error, error_description })
           })
 
-          it('returns an error', async () => {
-            return client.generatePresentation(presentationAuthorization)
-            .then(() => {
-              assert(false)
-            }).catch(error => {
-              expect(error.message).to.eq(error_description)
-            })
+          it('returns presentation result', async () => {
+            const result = await client.generatePresentation(presentationAuthorization)
+            assert(result.vp_token)
+            assert(result.presentation_submission)
+            expect(result.redirect_uri).to.eq('https://verifier.host/openid/direct_post/b085124e-e721-482e-ac3e-4271719ec7d5')
+            expect(result.credentials).to.deep.eq([
+              {
+                'claims': [
+                  {
+                    'key': 'foo',
+                    'value': 'bar'
+                  }
+                ],
+                'credential': 'eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDprZXk6ejJkbXpEODFjZ1B4OFZraTdKYnV1TW1GWXJXUGdZb3l0eWtVWjNleXFodDFqOUticHhoSnFlQUhROVBoaldBUVlnZlNyZlg5SEpaRTQxd0M3c2NUaHlGcmo5dllWOE5pMkx0V29EMkNhQnR3ZkNycEJ6MThiSHZoTkhndmhVeEhidHFocVRRcWFGcXVwMkdQcGZkMXNEazc5QWJiYXphYjNvb2ZWZFZZY2pBbW1kWTNtZSN6MmRtekQ4MWNnUHg4VmtpN0pidXVNbUZZcldQZ1lveXR5a1VaM2V5cWh0MWo5S2JweGhKcWVBSFE5UGhqV0FRWWdmU3JmWDlISlpFNDF3QzdzY1RoeUZyajl2WVY4TmkyTHRXb0QyQ2FCdHdmQ3JwQnoxOGJIdmhOSGd2aFV4SGJ0cWhxVFFxYUZxdXAyR1BwZmQxc0RrNzlBYmJhemFiM29vZlZkVlljakFtbWRZM21lIiwidHlwIjoiZGMrc2Qtand0In0.eyJfc2QiOlsiMm54UlR3MFhNMUxZaFVRemZZRkxNZzlHUldfM01ZYkFHQ3FoeEdFcXVqMCJdLCJjbmYiOnsiandrIjp7ImNydiI6IlAtMjU2Iiwia3R5IjoiRUMiLCJ4IjoiUFl3bkJVa0lOcWFQSmJmb2daRi1LeHhLLXJ0dExEMFdid1VuV1BvY3JWYyIsInkiOiJqajZMVmNNNGw2ZmM5bi1JVllWeVo2UklSU21MaGZMSnNGaGRSTThVZ0FRIn19LCJleHAiOjE3NzI1Nzk5NjQsImlhdCI6MTc0MTA0Mzk2NCwiaXNzIjoiZGlkOmtleTp6MmRtekQ4MWNnUHg4VmtpN0pidXVNbUZZcldQZ1lveXR5a1VaM2V5cWh0MWo5S2JweGhKcWVBSFE5UGhqV0FRWWdmU3JmWDlISlpFNDF3QzdzY1RoeUZyajl2WVY4TmkyTHRXb0QyQ2FCdHdmQ3JwQnoxOGJIdmhOSGd2aFV4SGJ0cWhxVFFxYUZxdXAyR1BwZmQxc0RrNzlBYmJhemFiM29vZlZkVlljakFtbWRZM21lIiwic3ViIjoiZGlkOmtleTp6MmRtekQ4MWNnUHg4VmtpN0pidXVNbUZZcldQZ1lveXR5a1VaM2V5cWh0MWo5S2JwdFdGVWVVSkhodjJEaDd6RVFDUU1wNFpDTFhDWTVFdFpxQlREQ2Z2eFJNVFRkNDc2NlozdDRCd0ZGQzlCb1k0ZmdqTEh0N2VhRzlIeFZqRzVFU1E0bzVQSzdoRkR6aFR2V1NlUlM0dTVOejl6V2VRRk1VaVQ0Z3h4ZmR2ZVpuNjJnIiwidmN0IjpudWxsfQ.E8WgCrVqYUUtU1YUhEI-PmwcJnnirFlw9EeY7NZlPWZ6PZ5Ainz_JB-Vpvh6raPP_45msThKJi0xoteesudKUQ~WyJCaTk0WXdocHc1bkRvY0tRSkFBfjcxZTNjZmYzIiwiZm9vIiwiYmFyIl0~',
+                'credentialId': 'ThirdCredential',
+                'format': 'vc+sd-jwt',
+                'sub': 'did:key:z2dmzD81cgPx8Vki7JbuuMmFYrWPgYoytykUZ3eyqht1j9KbptWFUeUJHhv2Dh7zEQCQMp4ZCLXCY5EtZqBTDCfvxRMTTd4766Z3t4BwFFC9BoY4fgjLHt7eaG9HxVjG5ESQ4o5PK7hFDzhTvWSeRS4u5Nz9zWeQFMUiT4gxxfdveZn62g'
+              }
+            ])
           })
         })
       })

@@ -2,7 +2,7 @@ import { SignJWT, decodeJwt } from "jose";
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, PresentationDefinition, VerifiablePresentationSuccess } from "../oauth-responses"
 import { KeyStore } from '../key-store'
-import { CredentialsStore, PresentationParams } from '../credentials-store'
+import { CredentialsStore, PresentationCredentials } from '../credentials-store'
 import { STATE_KEY, NONCE_KEY } from '../constants'
 import { Storage } from '../storage'
 import { EventHandler } from '../event-handler'
@@ -17,6 +17,14 @@ export type VerifiablePresentationsParams =  {
   clientId: string
   redirectUri: string
   responseType?: string
+}
+
+export type VerifiablePresentationResult = VerifiablePresentationSuccess & {
+  id: string
+}
+
+type PresentationResult = PresentationCredentials & {
+  redirect_uri: string
 }
 
 export function createVerifiablePresentationsClient({ oauth, eventHandler, storage }: VerifiablePresentationsFactoryParams) {
@@ -41,7 +49,7 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
       this.credentialsStore = new CredentialsStore(eventHandler, storage)
     }
 
-    async parseVerifiablePresentationAuthorization(location: Location): Promise<VerifiablePresentationSuccess> {
+    async parseVerifiablePresentationAuthorization(location: Location): Promise<VerifiablePresentationResult> {
       if (location.search === '') {
         return Promise.reject(new OauthError({
           error: 'unkown_error',
@@ -58,7 +66,10 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
         response_type,
       } = await parseVerifiablePresentationsParams(params)
 
+      const { presentation_definition: { id } } = await parseVerifiablePresentationRequest(request)
+
       return {
+        id,
         request,
         client_id,
         redirect_uri,
@@ -70,18 +81,15 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
     async generatePresentation({
       request,
       redirect_uri
-    }: VerifiablePresentationSuccess): Promise<PresentationParams> {
+    }: VerifiablePresentationSuccess): Promise<PresentationResult> {
       const { presentation_definition } = await parseVerifiablePresentationRequest(request)
       const url = new URL(redirect_uri)
 
-      console.log(presentation_definition)
-
       const presentation = await this.credentialsStore.presentation(presentation_definition)
-      console.log(presentation)
+
       return {
-        credentials: [],
-        vp_token: '',
-        presentation_submission: ''
+        redirect_uri,
+        ...presentation
       }
     }
 
