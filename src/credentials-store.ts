@@ -4,7 +4,7 @@ import { CredentialSuccess, PresentationDefinition, InputDescriptor } from './oa
 import { Storage } from './storage'
 import { EventHandler } from './event-handler'
 import { CREDENTIALS_KEY } from './constants'
-import { extractKeys, KeyPair } from './key-store'
+import { KeyPair } from './key-store'
 
 export type PresentationParams = {
   credentials: Array<Credential>

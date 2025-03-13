@@ -1,7 +1,7 @@
 import { SignJWT, decodeJwt } from "jose";
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, PresentationDefinition, VerifiablePresentationSuccess } from "../oauth-responses"
-import { KeyStore, extractKeys } from '../key-store'
+import { KeyStore } from '../key-store'
 import { CredentialsStore, PresentationParams } from '../credentials-store'
 import { STATE_KEY, NONCE_KEY } from '../constants'
 import { Storage } from '../storage'

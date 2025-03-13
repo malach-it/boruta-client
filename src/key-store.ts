@@ -1,3 +1,4 @@
+import { SignJWT } from "jose";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib"
 import { exportJWK, exportPKCS8, importJWK, generateKeyPair, KeyLike, JWK } from "jose"
 import { PUBLIC_KEY_STORAGE_KEY, PRIVATE_KEY_STORAGE_KEY } from './constants'
@@ -59,16 +60,32 @@ export class KeyStore {
     await this.storage.store(PUBLIC_KEY_STORAGE_KEY, publicKeyJwk)
     await this.storage.store(PRIVATE_KEY_STORAGE_KEY, privateKeyJwk)
   }
-}
 
-export async function extractKeys(keyStore: KeyStore, eventKey: string): Promise<KeyPair> {
-  keyStore.eventHandler.dispatch('extract_key-request', eventKey)
+  async sign(payload: Object, eventKey: string): Promise<string> {
+    const { privateKey, did } = await this.extractKeys(eventKey)
 
-  return new Promise((resolve, reject) => {
-    keyStore.eventHandler.listen('extract_key-approval', eventKey, () => {
-      return doExtractKeys(keyStore).then(resolve).catch(reject)
+    return new SignJWT({
+      "iss": did,
+      "sub": did,
+      ...payload
     })
-  })
+      .setProtectedHeader({
+        alg: 'ES256',
+        typ: 'JWT',
+        kid: did
+      })
+      .sign(privateKey)
+  }
+
+  async extractKeys(eventKey: string): Promise<KeyPair> {
+    this.eventHandler.dispatch('extract_key-request', eventKey)
+
+    return new Promise((resolve, reject) => {
+      this.eventHandler.listen('extract_key-approval', eventKey, () => {
+        return doExtractKeys(this).then(resolve).catch(reject)
+      })
+    })
+  }
 }
 
 async function doExtractKeys(keyStore: KeyStore): Promise<{ privateKey: KeyLike, publicKey: KeyLike, did: string }> {

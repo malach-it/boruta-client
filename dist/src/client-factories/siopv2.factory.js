@@ -7,9 +7,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { SignJWT } from "jose";
 import { OauthError } from "../oauth-responses";
-import { KeyStore, extractKeys } from '../key-store';
+import { KeyStore } from '../key-store';
 import { STATE_KEY, NONCE_KEY } from '../constants';
 export function createSiopv2Client({ oauth, eventHandler, storage }) {
     return class Siopv2 {
@@ -55,19 +54,14 @@ export function createSiopv2Client({ oauth, eventHandler, storage }) {
                 //     console.log(jwt)
                 //   }
                 // })
-                const { privateKey, did } = yield extractKeys(this.keyStore, client_id);
                 const now = Math.floor((new Date()) / 1000);
                 const payload = {
-                    "iss": did,
-                    "sub": did,
                     "aud": redirect_uri,
                     "nonce": "nonce",
                     "exp": now + 600,
                     "iat": now
                 };
-                const id_token = yield new SignJWT(payload)
-                    .setProtectedHeader({ alg: 'ES256', kid: did })
-                    .sign(privateKey);
+                const id_token = yield this.keyStore.sign(payload, client_id);
                 return {
                     id_token,
                     client_id,

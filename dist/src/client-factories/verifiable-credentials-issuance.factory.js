@@ -7,9 +7,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { SignJWT } from "jose";
 import { OauthError } from "../oauth-responses";
-import { KeyStore, extractKeys } from '../key-store';
+import { KeyStore } from '../key-store';
 import { CredentialsStore } from '../credentials-store';
 export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler, storage }) {
     return class VerifiableCredentialsIssuance {
@@ -65,13 +64,11 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
         }
         getCredentialParams(eventKey, credentialIdentifier, format) {
             return __awaiter(this, void 0, void 0, function* () {
-                const { privateKey, did } = yield extractKeys(this.keyStore, eventKey);
-                const proofJwt = yield new SignJWT({
+                const payload = {
                     iat: (Date.now() / 1000),
                     aud: this.oauth.host
-                })
-                    .setProtectedHeader({ alg: 'ES256', typ: 'JWT', kid: did })
-                    .sign(privateKey);
+                };
+                const proofJwt = yield this.keyStore.sign(payload, eventKey);
                 const proof = {
                     proof_type: 'jwt',
                     jwt: proofJwt

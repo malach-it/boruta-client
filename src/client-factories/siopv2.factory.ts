@@ -1,7 +1,6 @@
-import { SignJWT } from "jose";
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, Siopv2Success } from "../oauth-responses"
-import { KeyStore, extractKeys } from '../key-store'
+import { KeyStore } from '../key-store'
 import { STATE_KEY, NONCE_KEY } from '../constants'
 import { Storage } from '../storage'
 import { EventHandler } from '../event-handler'
@@ -85,22 +84,15 @@ export function createSiopv2Client({ oauth, eventHandler, storage }: Siopv2Facto
       //   }
       // })
 
-
-
-      const { privateKey, did } = await extractKeys(this.keyStore, client_id)
       const now = Math.floor((new Date()) as unknown as number / 1000)
       const payload = {
-        "iss": did,
-        "sub": did,
         "aud": redirect_uri,
         "nonce": "nonce",
         "exp": now + 600,
         "iat": now
       }
 
-      const id_token = await new SignJWT(payload)
-        .setProtectedHeader({ alg: 'ES256', kid: did })
-        .sign(privateKey)
+      const id_token = await this.keyStore.sign(payload, client_id)
 
       return {
         id_token,

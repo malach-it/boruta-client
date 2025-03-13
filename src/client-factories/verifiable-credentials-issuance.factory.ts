@@ -1,8 +1,6 @@
-import { SignJWT } from "jose";
-
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, PreauthorizedCodeSuccess, TokenSuccess, CredentialSuccess } from "../oauth-responses"
-import { KeyStore, extractKeys } from '../key-store'
+import { KeyStore } from '../key-store'
 import { CredentialsStore } from '../credentials-store'
 import { Storage } from '../storage'
 import { EventHandler } from '../event-handler'
@@ -88,14 +86,12 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
     }
 
     async getCredentialParams (eventKey: string, credentialIdentifier: string, format: string) {
-      const { privateKey, did } = await extractKeys(this.keyStore, eventKey)
-
-      const proofJwt = await new SignJWT({
+      const payload = {
         iat: (Date.now() / 1000),
         aud: this.oauth.host
-      })
-        .setProtectedHeader({ alg: 'ES256', typ: 'JWT', kid: did })
-        .sign(privateKey)
+      }
+
+      const proofJwt = await this.keyStore.sign(payload, eventKey)
 
       const proof = {
         proof_type: 'jwt',

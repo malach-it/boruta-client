@@ -7,6 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+import { SignJWT } from "jose";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { exportJWK, importJWK, generateKeyPair } from "jose";
 import { PUBLIC_KEY_STORAGE_KEY, PRIVATE_KEY_STORAGE_KEY } from './constants';
@@ -60,16 +61,28 @@ export class KeyStore {
             yield this.storage.store(PRIVATE_KEY_STORAGE_KEY, privateKeyJwk);
         });
     }
-}
-export function extractKeys(keyStore, eventKey) {
-    return __awaiter(this, void 0, void 0, function* () {
-        keyStore.eventHandler.dispatch('extract_key-request', eventKey);
-        return new Promise((resolve, reject) => {
-            keyStore.eventHandler.listen('extract_key-approval', eventKey, () => {
-                return doExtractKeys(keyStore).then(resolve).catch(reject);
+    sign(payload, eventKey) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { privateKey, did } = yield this.extractKeys(eventKey);
+            return new SignJWT(Object.assign({ "iss": did, "sub": did }, payload))
+                .setProtectedHeader({
+                alg: 'ES256',
+                typ: 'JWT',
+                kid: did
+            })
+                .sign(privateKey);
+        });
+    }
+    extractKeys(eventKey) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.eventHandler.dispatch('extract_key-request', eventKey);
+            return new Promise((resolve, reject) => {
+                this.eventHandler.listen('extract_key-approval', eventKey, () => {
+                    return doExtractKeys(this).then(resolve).catch(reject);
+                });
             });
         });
-    });
+    }
 }
 function doExtractKeys(keyStore) {
     return __awaiter(this, void 0, void 0, function* () {
