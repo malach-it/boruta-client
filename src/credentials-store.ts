@@ -111,6 +111,7 @@ export class CredentialsStore {
                 path: '$',
                 format: 'jwt_vp',
                 path_nested: {
+                  id: index.toString(),
                   format: credential.format,
                   path: `$.verifiableCredential[${index}]`
                 }
