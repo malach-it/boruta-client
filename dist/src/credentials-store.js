@@ -79,7 +79,7 @@ export class CredentialsStore {
                                 const descriptor = {
                                     id: credential.credentialId,
                                     path: '$',
-                                    format: credential.format,
+                                    format: 'jwt_vp',
                                     path_nested: {
                                         format: credential.format,
                                         path: `$.verifiableCredential[${index}]`

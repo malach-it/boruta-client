@@ -170,7 +170,7 @@ describe('BorutaOauth', () => {
         authorization_details: []
       }
       const credentialIdentifier = 'credential_identifier'
-      const format = 'format'
+      const format = 'jwt_vc'
 
       describe('OAuth request is a failure', () => {
         beforeEach(() => {
@@ -205,7 +205,7 @@ describe('BorutaOauth', () => {
 
       describe('OAuth request is a success', () => {
         const credentialSuccess = {
-          format: 'format',
+          format: 'vc+sd-jwt',
           credential: 'eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDprZXk6ejJkbXpEODFjZ1B4OFZraTdKYnV1TW1GWXJXUGdZb3l0eWtVWjNleXFodDFqOUticHhoSnFlQUhROVBoaldBUVlnZlNyZlg5SEpaRTQxd0M3c2NUaHlGcmo5dllWOE5pMkx0V29EMkNhQnR3ZkNycEJ6MThiSHZoTkhndmhVeEhidHFocVRRcWFGcXVwMkdQcGZkMXNEazc5QWJiYXphYjNvb2ZWZFZZY2pBbW1kWTNtZSN6MmRtekQ4MWNnUHg4VmtpN0pidXVNbUZZcldQZ1lveXR5a1VaM2V5cWh0MWo5S2JweGhKcWVBSFE5UGhqV0FRWWdmU3JmWDlISlpFNDF3QzdzY1RoeUZyajl2WVY4TmkyTHRXb0QyQ2FCdHdmQ3JwQnoxOGJIdmhOSGd2aFV4SGJ0cWhxVFFxYUZxdXAyR1BwZmQxc0RrNzlBYmJhemFiM29vZlZkVlljakFtbWRZM21lIiwidHlwIjoiZGMrc2Qtand0In0.eyJfc2QiOlsiTVBaMFlGQlp4eGNFR1lzcFpqY2hKaktvWEVxOVlqem5tSFFNYmEzRlpNSSJdLCJjbmYiOnsiandrIjp7ImNydiI6IlAtMjU2Iiwia3R5IjoiRUMiLCJ4IjoiUFl3bkJVa0lOcWFQSmJmb2daRi1LeHhLLXJ0dExEMFdid1VuV1BvY3JWYyIsInkiOiJqajZMVmNNNGw2ZmM5bi1JVllWeVo2UklSU21MaGZMSnNGaGRSTThVZ0FRIn19LCJleHAiOjE3NzI1NDk5ODQsImlhdCI6MTc0MTAxMzk4NCwiaXNzIjoiZGlkOmtleTp6MmRtekQ4MWNnUHg4VmtpN0pidXVNbUZZcldQZ1lveXR5a1VaM2V5cWh0MWo5S2JweGhKcWVBSFE5UGhqV0FRWWdmU3JmWDlISlpFNDF3QzdzY1RoeUZyajl2WVY4TmkyTHRXb0QyQ2FCdHdmQ3JwQnoxOGJIdmhOSGd2aFV4SGJ0cWhxVFFxYUZxdXAyR1BwZmQxc0RrNzlBYmJhemFiM29vZlZkVlljakFtbWRZM21lIiwic3ViIjoiZGlkOmtleTp6MmRtekQ4MWNnUHg4VmtpN0pidXVNbUZZcldQZ1lveXR5a1VaM2V5cWh0MWo5S2JwdFdGVWVVSkhodjJEaDd6RVFDUU1wNFpDTFhDWTVFdFpxQlREQ2Z2eFJNVFRkNDc2NlozdDRCd0ZGQzlCb1k0ZmdqTEh0N2VhRzlIeFZqRzVFU1E0bzVQSzdoRkR6aFR2V1NlUlM0dTVOejl6V2VRRk1VaVQ0Z3h4ZmR2ZVpuNjJnIiwidmN0IjpudWxsfQ.MUhJoMN8yR_pM6z4eFj-AQvWriptJtftrwh9QrkhVFajDfN7BU2niXNlDnSKE5pc6xEOe4KPkhfht_KwkwcsmA~WyJCaTl4YUJ2Q2hzS293NkhDa0NRQX43MWUzY2ZmMyIsInRlc3QiLCJhZG1pbkB0ZXN0LnRlc3QiXQ~'
         }
         beforeEach(() => {
