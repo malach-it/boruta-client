@@ -159,11 +159,10 @@ export class CredentialsStore {
   }
 
   async generatePresentationSubmission({ descriptorMap }: PresentationParams, eventKey: string): Promise<string> {
-    const payload = {
+    return JSON.stringify({
       id: eventKey,
       descriptor_map: descriptorMap
-    }
-    return this.keyStore.sign(payload, eventKey)
+    })
   }
 }
 

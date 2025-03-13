@@ -128,11 +128,10 @@ export class CredentialsStore {
     }
     generatePresentationSubmission(_a, eventKey_1) {
         return __awaiter(this, arguments, void 0, function* ({ descriptorMap }, eventKey) {
-            const payload = {
+            return JSON.stringify({
                 id: eventKey,
                 descriptor_map: descriptorMap
-            };
-            return this.keyStore.sign(payload, eventKey);
+            });
         });
     }
 }
