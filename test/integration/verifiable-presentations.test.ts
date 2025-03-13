@@ -46,7 +46,11 @@ describe('BorutaOauth', () => {
     describe('#generatePresentation', () => {
       describe('with an invalid presentation authorization', () => {
         const presentationAuthorization = {
-          request: "",
+          request: "invalid",
+          presentation_definition: {
+            id: 'test',
+            input_descriptors: []
+          },
           client_id: "8020f8e5-9d2d-4a15-8eab-aa3fb29330e3",
           redirect_uri: "http://localhost:4000/openid/direct_post/b085124e-e721-482e-ac3e-4271719ec7d5",
           response_mode: "post",
@@ -66,6 +70,32 @@ describe('BorutaOauth', () => {
       describe('with a valid presentation authorization', () => {
         const presentationAuthorization = {
           request: "eyJhbGciOiJFUzI1NiIsImtpZCI6IjI4UlBXWkZtajdLdW5zdGdnIiwidHlwIjoiSldUIn0.eyJhdWQiOiI4MDIwZjhlNS05ZDJkLTRhMTUtOGVhYi1hYTNmYjI5MzMwZTMiLCJjbGllbnRfaWQiOiJodHRwOi8vbG9jYWxob3N0OjQwMDAiLCJleHAiOjE3NDExMjM4OTQsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6NDAwMCIsIm5vbmNlIjpudWxsLCJwcmVzZW50YXRpb25fZGVmaW5pdGlvbiI6eyJpZCI6ImNyZWRlbnRpYWwiLCJpbnB1dF9kZXNjcmlwdG9ycyI6W3siY29uc3RyYWludHMiOnsiZmllbGRzIjpbeyJmaWx0ZXIiOnsicGF0dGVybiI6ImJhciIsInR5cGUiOiJzdHJpbmcifSwicGF0aCI6WyIkLmZvbyJdfV19LCJmb3JtYXQiOnsidmMrc2Qtand0Ijp7InByb29mX3R5cGUiOlsiand0Il19fSwiaWQiOiJmb28ifV19LCJyZWRpcmVjdF91cmkiOiJodHRwOi8vbG9jYWxob3N0OjQwMDAvb3BlbmlkL2RpcmVjdF9wb3N0L2IwODUxMjRlLWU3MjEtNDgyZS1hYzNlLTQyNzE3MTllYzdkNSIsInJlc3BvbnNlX21vZGUiOiJwb3N0IiwicmVzcG9uc2VfdHlwZSI6InZwX3Rva2VuIiwic2NvcGUiOiJvcGVuaWQifQ.UlQ6GKZpEyW-sD6IV6_1xZSLMShK9VZ5w5ZGjgGTnbCLGz10MM4Bgl-1Yskkbz8TBUXi-ufBYJfx_bFktH-3SA",
+          presentation_definition: {
+            id: 'test',
+            input_descriptors: [{
+              "constraints": {
+                "fields": [
+                  {
+                    "filter": {
+                      "pattern": "bar",
+                      "type": "string"
+                    },
+                    "path": [
+                      "$.foo"
+                    ]
+                  }
+                ]
+              },
+              "format": {
+                "vc+sd-jwt": {
+                  "proof_type": [
+                    "jwt"
+                  ]
+                }
+              },
+              "id": "foo"
+            }]
+          },
           client_id: "8020f8e5-9d2d-4a15-8eab-aa3fb29330e3",
           redirect_uri: "https://verifier.host/openid/direct_post/b085124e-e721-482e-ac3e-4271719ec7d5",
           response_mode: "post",

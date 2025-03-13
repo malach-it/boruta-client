@@ -58,18 +58,24 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
       }
 
       const params = new URLSearchParams(location.search)
+      const parsedPresentation = await parseVerifiablePresentationsParams(params)
+
+      if (!parsedPresentation) {
+        return Promise.reject('Presentation success.')
+      }
+
       const {
         request,
+        presentation_definition,
         client_id,
         redirect_uri,
         response_mode,
         response_type,
-      } = await parseVerifiablePresentationsParams(params)
-
-      const { presentation_definition: { id } } = await parseVerifiablePresentationRequest(request)
+      } = parsedPresentation
 
       return {
-        id,
+        id: presentation_definition.id,
+        presentation_definition,
         request,
         client_id,
         redirect_uri,
@@ -82,8 +88,9 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
       request,
       redirect_uri
     }: VerifiablePresentationSuccess): Promise<PresentationResult> {
-      const { presentation_definition } = await parseVerifiablePresentationRequest(request)
       const url = new URL(redirect_uri)
+
+      const { presentation_definition } = await parseVerifiablePresentationRequest(request)
 
       const presentation = await this.credentialsStore.presentation(presentation_definition)
 
@@ -145,7 +152,21 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
   }
 }
 
-function parseVerifiablePresentationsParams(params: URLSearchParams): Promise<VerifiablePresentationSuccess> {
+async function parseVerifiablePresentationsParams(params: URLSearchParams): Promise<VerifiablePresentationSuccess | void> {
+  const error = params.get('error')
+  if (error) {
+    const error_description = params.get('error_description') || ''
+    return Promise.reject(new OauthError({
+      error,
+      error_description
+    }))
+  }
+
+  const code = params.get('code')
+  if (code) {
+    return Promise.resolve()
+  }
+
   const request = params.get('request')
   if (!request) {
     return Promise.reject(new OauthError({
@@ -153,6 +174,7 @@ function parseVerifiablePresentationsParams(params: URLSearchParams): Promise<Ve
       error_description: 'request parameter is missing in VerifiablePresentations response location.'
     }))
   }
+  const { presentation_definition } = await parseVerifiablePresentationRequest(request)
 
   const client_id = params.get('client_id')
   if (!client_id) {
@@ -182,6 +204,7 @@ function parseVerifiablePresentationsParams(params: URLSearchParams): Promise<Ve
 
   return Promise.resolve({
     request,
+    presentation_definition,
     client_id,
     redirect_uri,
     response_mode,

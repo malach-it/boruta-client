@@ -69,6 +69,7 @@ export interface Siopv2Success {
 
 export interface VerifiablePresentationSuccess {
   request: string
+  presentation_definition: PresentationDefinition
   client_id: string
   redirect_uri: string
   response_mode?: string
@@ -85,6 +86,6 @@ export type InputDescriptor = {
     [format: string]: Object
   }
   constraints: {
-    fields: Array<{ path: string }>
+    fields: Array<{ path: Array<string> }>
   }
 }

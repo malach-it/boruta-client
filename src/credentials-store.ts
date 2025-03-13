@@ -102,7 +102,7 @@ export class CredentialsStore {
 
       return credentials.reduce((acc: PresentationParams, credential: Credential) => {
         if (credential.validateFormat(Object.keys(descriptor.format))) {
-          return descriptor.constraints.fields.map((field: { path: string }) => {
+          return descriptor.constraints.fields.map((field: { path: Array<string> }) => {
             if (
               credential.hasClaim(field.path[0])
             ) {

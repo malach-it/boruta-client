@@ -31,10 +31,14 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
                     }));
                 }
                 const params = new URLSearchParams(location.search);
-                const { request, client_id, redirect_uri, response_mode, response_type, } = yield parseVerifiablePresentationsParams(params);
-                const { presentation_definition: { id } } = yield parseVerifiablePresentationRequest(request);
+                const parsedPresentation = yield parseVerifiablePresentationsParams(params);
+                if (!parsedPresentation) {
+                    return Promise.reject('Presentation success.');
+                }
+                const { request, presentation_definition, client_id, redirect_uri, response_mode, response_type, } = parsedPresentation;
                 return {
-                    id,
+                    id: presentation_definition.id,
+                    presentation_definition,
                     request,
                     client_id,
                     redirect_uri,
@@ -45,8 +49,8 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
         }
         generatePresentation(_a) {
             return __awaiter(this, arguments, void 0, function* ({ request, redirect_uri }) {
-                const { presentation_definition } = yield parseVerifiablePresentationRequest(request);
                 const url = new URL(redirect_uri);
+                const { presentation_definition } = yield parseVerifiablePresentationRequest(request);
                 const presentation = yield this.credentialsStore.presentation(presentation_definition);
                 return Object.assign({ redirect_uri }, presentation);
             });
@@ -101,41 +105,57 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
     };
 }
 function parseVerifiablePresentationsParams(params) {
-    const request = params.get('request');
-    if (!request) {
-        return Promise.reject(new OauthError({
-            error: 'unkown_error',
-            error_description: 'request parameter is missing in VerifiablePresentations response location.'
-        }));
-    }
-    const client_id = params.get('client_id');
-    if (!client_id) {
-        return Promise.reject(new OauthError({
-            error: 'unkown_error',
-            error_description: 'client_id parameter is missing in VerifiablePresentations response location.'
-        }));
-    }
-    const redirect_uri = params.get('redirect_uri');
-    if (!redirect_uri) {
-        return Promise.reject(new OauthError({
-            error: 'unkown_error',
-            error_description: 'redirect_uri parameter is missing in VerifiablePresentations response location.'
-        }));
-    }
-    const response_mode = params.get('response_mode') || undefined;
-    const response_type = params.get('response_type');
-    if (!response_type) {
-        return Promise.reject(new OauthError({
-            error: 'unkown_error',
-            error_description: 'response_type parameter is missing in VerifiablePresentations response location.'
-        }));
-    }
-    return Promise.resolve({
-        request,
-        client_id,
-        redirect_uri,
-        response_mode,
-        response_type
+    return __awaiter(this, void 0, void 0, function* () {
+        const error = params.get('error');
+        if (error) {
+            const error_description = params.get('error_description') || '';
+            return Promise.reject(new OauthError({
+                error,
+                error_description
+            }));
+        }
+        const code = params.get('code');
+        if (code) {
+            return Promise.resolve();
+        }
+        const request = params.get('request');
+        if (!request) {
+            return Promise.reject(new OauthError({
+                error: 'unkown_error',
+                error_description: 'request parameter is missing in VerifiablePresentations response location.'
+            }));
+        }
+        const { presentation_definition } = yield parseVerifiablePresentationRequest(request);
+        const client_id = params.get('client_id');
+        if (!client_id) {
+            return Promise.reject(new OauthError({
+                error: 'unkown_error',
+                error_description: 'client_id parameter is missing in VerifiablePresentations response location.'
+            }));
+        }
+        const redirect_uri = params.get('redirect_uri');
+        if (!redirect_uri) {
+            return Promise.reject(new OauthError({
+                error: 'unkown_error',
+                error_description: 'redirect_uri parameter is missing in VerifiablePresentations response location.'
+            }));
+        }
+        const response_mode = params.get('response_mode') || undefined;
+        const response_type = params.get('response_type');
+        if (!response_type) {
+            return Promise.reject(new OauthError({
+                error: 'unkown_error',
+                error_description: 'response_type parameter is missing in VerifiablePresentations response location.'
+            }));
+        }
+        return Promise.resolve({
+            request,
+            presentation_definition,
+            client_id,
+            redirect_uri,
+            response_mode,
+            response_type
+        });
     });
 }
 function parseVerifiablePresentationRequest(request) {
