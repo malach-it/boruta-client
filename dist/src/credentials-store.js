@@ -7,6 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+import { decodeJwt } from 'jose';
 import { decodeSdJwt } from '@sd-jwt/decode';
 import { CREDENTIALS_KEY } from './constants';
 import { KeyStore } from './key-store';
@@ -153,18 +154,38 @@ export class Credential {
     validateFormat(formats) {
         return formats.includes(this.format);
     }
-    static fromResponse(credentialId, { format, credential }) {
-        return decodeSdJwt(credential, () => { return Promise.resolve(new Uint8Array()); }).then(formattedCredential => {
-            const params = {
-                credentialId,
-                format,
-                credential,
-                claims: formattedCredential.disclosures.map(({ key, value }) => {
-                    return { key, value };
-                }),
-                sub: formattedCredential.jwt.payload.sub || ''
-            };
-            return new Credential(params);
+    static fromResponse(credentialId_1, _a) {
+        return __awaiter(this, arguments, void 0, function* (credentialId, { format, credential }) {
+            if (format == 'vc+sd-jwt') {
+                return decodeSdJwt(credential, () => { return Promise.resolve(new Uint8Array()); }).then(formattedCredential => {
+                    const params = {
+                        credentialId,
+                        format,
+                        credential,
+                        claims: formattedCredential.disclosures.map(({ key, value }) => {
+                            return { key, value: value || '' };
+                        }),
+                        sub: formattedCredential.jwt.payload.sub || ''
+                    };
+                    return new Credential(params);
+                });
+            }
+            if (format == 'jwt_vc') {
+                const claims = yield decodeJwt(credential);
+                const credentialId = Object.keys(claims.credentialSubject)[0];
+                const params = {
+                    credentialId,
+                    format,
+                    credential,
+                    claims: Object.keys(claims.credentialSubject[credentialId]).map(key => {
+                        const value = claims.credentialSubject[credentialId][key];
+                        return { key, value };
+                    }),
+                    sub: claims.credentialSubject[credentialId].id
+                };
+                return new Credential(params);
+            }
+            return Promise.reject(new Error('Unsupported format.'));
         });
     }
 }

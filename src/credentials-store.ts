@@ -1,3 +1,4 @@
+import { decodeJwt } from 'jose'
 import { decodeSdJwt } from '@sd-jwt/decode'
 
 import { CredentialSuccess, PresentationDefinition, InputDescriptor } from './oauth-responses'
@@ -170,11 +171,11 @@ type CredentialParams = {
   credentialId: string
   format: string
   credential: string
-  claims: Array<{ key: string | undefined, value: unknown }>
+  claims: Array<{ key: string | undefined, value: string | Object }>
   sub: string
 }
 
-type CredentialClaim = { key: string | undefined, value: unknown }
+type CredentialClaim = { key: string | undefined, value: string | Object }
 
 export class Credential {
   credentialId: string
@@ -210,22 +211,51 @@ export class Credential {
     return formats.includes(this.format)
   }
 
-  static fromResponse(credentialId: string, { format, credential }: CredentialSuccess): Promise<Credential> {
+  static async fromResponse(credentialId: string, { format, credential }: CredentialSuccess): Promise<Credential> {
 
-    return decodeSdJwt(
-      credential,
-      () => { return Promise.resolve(new Uint8Array()) }
-    ).then(formattedCredential => {
+    if (format == 'vc+sd-jwt') {
+      return decodeSdJwt(
+        credential,
+        () => { return Promise.resolve(new Uint8Array()) }
+      ).then(formattedCredential => {
+        const params = {
+          credentialId,
+          format,
+          credential,
+          claims: formattedCredential.disclosures.map(({ key, value }) => {
+            return { key, value: value as string || '' }
+          }),
+          sub: formattedCredential.jwt.payload.sub as string || ''
+        }
+        return new Credential(params)
+      })
+    }
+    if (format == 'jwt_vc') {
+      const claims: JwtVcCredential = await decodeJwt(credential)
+      const credentialId = Object.keys(claims.credentialSubject)[0]
       const params = {
         credentialId,
         format,
         credential,
-        claims: formattedCredential.disclosures.map(({ key, value }) => {
+        claims: Object.keys(claims.credentialSubject[credentialId]).map(key => {
+          const value: string | Object = claims.credentialSubject[credentialId][key]
           return { key, value }
         }),
-        sub: formattedCredential.jwt.payload.sub as string || ''
+        sub: claims.credentialSubject[credentialId].id
       }
       return new Credential(params)
-    })
+    }
+
+    return Promise.reject(new Error('Unsupported format.'))
   }
+}
+
+type JwtVcCredential = {
+  credentialSubject: {
+    [key: string]: {
+      [key: Exclude<string, 'id'>]: string | Object
+      id: string
+    }
+  }
+  id: string
 }
