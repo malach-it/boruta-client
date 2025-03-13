@@ -7,8 +7,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+import { decodeJwt } from "jose";
 import { OauthError } from "../oauth-responses";
 import { KeyStore } from '../key-store';
+import { CredentialsStore } from '../credentials-store';
 import { STATE_KEY, NONCE_KEY } from '../constants';
 export function createVerifiablePresentationsClient({ oauth, eventHandler, storage }) {
     return class VerifiablePresentations {
@@ -18,6 +20,7 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
             this.redirectUri = redirectUri;
             this.responseType = responseType || 'vp_token';
             this.keyStore = new KeyStore(eventHandler, storage);
+            this.credentialsStore = new CredentialsStore(eventHandler, storage);
         }
         parseVerifiablePresentationAuthorization(location) {
             return __awaiter(this, void 0, void 0, function* () {
@@ -35,6 +38,20 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
                     redirect_uri,
                     response_mode,
                     response_type,
+                };
+            });
+        }
+        generatePresentation(_a) {
+            return __awaiter(this, arguments, void 0, function* ({ request, redirect_uri }) {
+                const { presentation_definition } = yield parseVerifiablePresentationRequest(request);
+                const url = new URL(redirect_uri);
+                console.log(presentation_definition);
+                const presentation = yield this.credentialsStore.presentation(presentation_definition);
+                console.log(presentation);
+                return {
+                    credentials: [],
+                    vp_token: '',
+                    presentation_submission: ''
                 };
             });
         }
@@ -123,5 +140,27 @@ function parseVerifiablePresentationsParams(params) {
         redirect_uri,
         response_mode,
         response_type
+    });
+}
+function parseVerifiablePresentationRequest(request) {
+    let decodedRequest;
+    try {
+        decodedRequest = decodeJwt(request);
+    }
+    catch (error) {
+        return Promise.reject(new OauthError({
+            error: 'unkown_error',
+            error_description: error.toString()
+        }));
+    }
+    const presentation_definition = decodedRequest['presentation_definition'];
+    if (!presentation_definition) {
+        return Promise.reject(new OauthError({
+            error: 'unkown_error',
+            error_description: 'presentation_definition parameter is missing in VerifiablePresentations request.'
+        }));
+    }
+    return Promise.resolve({
+        presentation_definition
     });
 }

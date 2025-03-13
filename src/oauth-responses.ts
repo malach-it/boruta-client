@@ -74,3 +74,17 @@ export interface VerifiablePresentationSuccess {
   response_mode?: string
   response_type: string
 }
+
+export type PresentationDefinition = {
+  id: string
+  input_descriptors: Array<InputDescriptor>
+}
+
+export type InputDescriptor = {
+  format: {
+    [format: string]: Object
+  }
+  constraints: {
+    fields: Array<{ path: string }>
+  }
+}

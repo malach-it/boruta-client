@@ -44,7 +44,7 @@ describe('BorutaOauth', () => {
         })
 
         it('returns an error', async () => {
-          client.parseLocation(window.location)
+          return client.parseLocation(window.location)
             .then(() => {
               assert(false)
             }).catch(error => {
@@ -67,7 +67,7 @@ describe('BorutaOauth', () => {
         it('returns an error', async () => {
           // @ts-ignore
           window.localStorage.getItem.withArgs(STATE_KEY).returns('state')
-          client.parseLocation(window.location)
+          return client.parseLocation(window.location)
             .then(() => {
               assert(false)
             }).catch(error => {
@@ -88,7 +88,7 @@ describe('BorutaOauth', () => {
         })
 
         it('returns an error', async () => {
-          client.parseLocation(window.location)
+          return client.parseLocation(window.location)
             .then(() => {
               assert(false)
             }).catch(error => {

@@ -8,7 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { decodeSdJwt } from '@sd-jwt/decode';
-const CREDENTIALS_KEY = 'boruta-client_credentials';
+import { CREDENTIALS_KEY } from './constants';
 export class CredentialsStore {
     constructor(eventHandler, storage) {
         this.eventHandler = eventHandler;
@@ -60,8 +60,59 @@ export class CredentialsStore {
             return this.storage.get(CREDENTIALS_KEY).then(credentials => {
                 if (!credentials)
                     return [];
-                return credentials.map((credential) => new Credential(credential));
+                return Promise.all(credentials.map(({ credentialId, format, credential }) => Credential.fromResponse(credentialId, { format, credential })));
             });
+        });
+    }
+    presentation(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ input_descriptors }) {
+            const credentials = yield this.credentials();
+            const result = { presentationCredentials: [], descriptorMap: [] };
+            return input_descriptors.reduce((acc, descriptor) => {
+                let index = 0;
+                return credentials.reduce((acc, credential) => {
+                    if (credential.validateFormat(Object.keys(descriptor.format))) {
+                        return descriptor.constraints.fields.map((field) => {
+                            if (credential.hasClaim(field.path[0])) {
+                                const descriptor = {
+                                    id: credential.credentialId,
+                                    path: '$',
+                                    format: credential.format,
+                                    path_nested: {
+                                        format: credential.format,
+                                        path: `$.verifiableCredential[${index}]`
+                                    }
+                                };
+                                console.log(descriptor);
+                                index = index + 1;
+                                return { credential, descriptor };
+                            }
+                        })
+                            .filter((e) => e)
+                            .reduce((acc, current) => {
+                            if (!current)
+                                return acc;
+                            const { credential, descriptor } = current;
+                            acc.presentationCredentials.push(credential);
+                            acc.descriptorMap.push(descriptor);
+                            return acc;
+                        }, acc);
+                    }
+                    else {
+                        return acc;
+                    }
+                }, acc);
+            }, result);
+        });
+    }
+    generateVpToken(presentation_1, _a) {
+        return __awaiter(this, arguments, void 0, function* (presentation, { privateKey }) {
+            return Promise.resolve('');
+        });
+    }
+    generatePresentationSubmission(presentation_1, _a) {
+        return __awaiter(this, arguments, void 0, function* (presentation, { privateKey }) {
+            return Promise.resolve('');
         });
     }
 }
@@ -72,6 +123,16 @@ export class Credential {
         this.credential = credential;
         this.claims = claims;
         this.sub = sub;
+    }
+    hasClaim(path) {
+        const claims = this.claims;
+        const pathInfo = path.replace(/^$/, '').split('.');
+        const current = pathInfo.pop();
+        const claim = claims.find(({ key }) => key == current);
+        return !!claim;
+    }
+    validateFormat(formats) {
+        return formats.includes(this.format);
     }
     static fromResponse(credentialId, { format, credential }) {
         return decodeSdJwt(credential, () => { return Promise.resolve(new Uint8Array()); }).then(formattedCredential => {

@@ -4,6 +4,12 @@ import { PUBLIC_KEY_STORAGE_KEY, PRIVATE_KEY_STORAGE_KEY } from './constants'
 import { Storage } from './storage'
 import { EventHandler } from './event-handler'
 
+export type KeyPair = {
+  privateKey: KeyLike
+  publicKey: KeyLike
+  did?: string
+}
+
 export class KeyStore {
   storage: Storage
   eventHandler: EventHandler
@@ -55,7 +61,7 @@ export class KeyStore {
   }
 }
 
-export async function extractKeys(keyStore: KeyStore, eventKey: string): Promise<{ privateKey: KeyLike, publicKey: KeyLike, did: string }> {
+export async function extractKeys(keyStore: KeyStore, eventKey: string): Promise<KeyPair> {
   keyStore.eventHandler.dispatch('extract_key-request', eventKey)
 
   return new Promise((resolve, reject) => {

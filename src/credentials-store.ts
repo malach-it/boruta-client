@@ -1,10 +1,31 @@
 import { decodeSdJwt } from '@sd-jwt/decode'
 
-import { CredentialSuccess } from './oauth-responses'
+import { CredentialSuccess, PresentationDefinition, InputDescriptor } from './oauth-responses'
 import { Storage } from './storage'
 import { EventHandler } from './event-handler'
+import { CREDENTIALS_KEY } from './constants'
+import { extractKeys, KeyPair } from './key-store'
 
-const CREDENTIALS_KEY = 'boruta-client_credentials'
+export type PresentationParams = {
+  credentials: Array<Credential>
+  vp_token: string
+  presentation_submission: string
+}
+
+type Descriptor = {
+  id: string,
+  format: string
+  path: string,
+  path_nested: {
+    format: string
+    path: string
+  }
+}
+
+type PresentationResult = {
+  presentationCredentials: Array<Credential>
+  descriptorMap: Array<Descriptor>
+}
 
 export class CredentialsStore {
   eventHandler: EventHandler
@@ -64,8 +85,65 @@ export class CredentialsStore {
     return this.storage.get<Array<CredentialParams>>(CREDENTIALS_KEY).then(credentials => {
       if (!credentials) return []
 
-      return credentials.map((credential: CredentialParams) => new Credential(credential))
+      return Promise.all(
+        credentials.map(({ credentialId, format, credential }: CredentialParams) => Credential.fromResponse(credentialId, { format, credential }))
+      )
     })
+  }
+
+  async presentation({ input_descriptors }: PresentationDefinition): Promise<PresentationResult> {
+    const credentials = await this.credentials()
+
+    const result: PresentationResult = { presentationCredentials: [], descriptorMap: [] }
+
+    return input_descriptors.reduce((acc: PresentationResult, descriptor: InputDescriptor) => {
+      let index = 0
+
+      return credentials.reduce((acc: PresentationResult, credential: Credential) => {
+        if (credential.validateFormat(Object.keys(descriptor.format))) {
+          return descriptor.constraints.fields.map((field: { path: string }) => {
+            if (
+              credential.hasClaim(field.path[0])
+            ) {
+              const descriptor = {
+                id: credential.credentialId,
+                path: '$',
+                format: credential.format,
+                path_nested: {
+                  format: credential.format,
+                  path: `$.verifiableCredential[${index}]`
+                }
+              }
+              console.log(descriptor)
+              index = index + 1
+              return { credential, descriptor }
+            }
+          })
+            .filter((e: { credential: Credential, descriptor: Descriptor } | undefined) => e)
+            .reduce((
+              acc: PresentationResult,
+              current: { credential: Credential, descriptor: Descriptor } | undefined
+            ) => {
+              if (!current) return acc
+              const { credential, descriptor } = current
+
+              acc.presentationCredentials.push(credential)
+              acc.descriptorMap.push(descriptor)
+              return acc
+            }, acc)
+        } else {
+          return acc
+        }
+      }, acc)
+    }, result)
+  }
+
+  async generateVpToken(presentation: PresentationResult, { privateKey }: KeyPair): Promise<string> {
+    return Promise.resolve('')
+  }
+
+  async generatePresentationSubmission(presentation: PresentationResult, { privateKey }: KeyPair): Promise<string> {
+    return Promise.resolve('')
   }
 }
 
@@ -77,11 +155,13 @@ type CredentialParams = {
   sub: string
 }
 
+type CredentialClaim = { key: string | undefined, value: unknown }
+
 export class Credential {
   credentialId: string
   format: string
   credential: string
-  claims: Array<{ key: string | undefined, value: unknown }>
+  claims: Array<CredentialClaim>
   sub: string
 
   constructor({
@@ -96,6 +176,19 @@ export class Credential {
     this.credential = credential
     this.claims = claims
     this.sub = sub
+  }
+
+  hasClaim (path: string): boolean {
+    const claims = this.claims
+    const pathInfo = path.replace(/^$/, '').split('.')
+
+    const current = pathInfo.pop()
+    const claim = claims.find(({ key }) => key == current)
+    return !!claim
+  }
+
+  validateFormat (formats: Array<string>): boolean {
+    return formats.includes(this.format)
   }
 
   static fromResponse(credentialId: string, { format, credential }: CredentialSuccess): Promise<Credential> {

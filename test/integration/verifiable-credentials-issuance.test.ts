@@ -56,7 +56,7 @@ describe('BorutaOauth', () => {
         })
 
         it('returns an error', async () => {
-          client.parsePreauthorizedCodeResponse(window.location)
+          return client.parsePreauthorizedCodeResponse(window.location)
             .then(() => {
               assert(false)
             }).catch(error => {
@@ -76,7 +76,7 @@ describe('BorutaOauth', () => {
         })
 
         it('returns an error', async () => {
-          client.parsePreauthorizedCodeResponse(window.location)
+          return client.parsePreauthorizedCodeResponse(window.location)
             .then(() => {
               assert(false)
             }).catch(error => {

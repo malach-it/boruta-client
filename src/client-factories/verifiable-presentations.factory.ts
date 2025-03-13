@@ -1,7 +1,8 @@
-import { SignJWT } from "jose";
+import { SignJWT, decodeJwt } from "jose";
 import { BorutaOauth } from "../boruta-oauth"
-import { OauthError, VerifiablePresentationSuccess } from "../oauth-responses"
+import { OauthError, PresentationDefinition, VerifiablePresentationSuccess } from "../oauth-responses"
 import { KeyStore, extractKeys } from '../key-store'
+import { CredentialsStore, PresentationParams } from '../credentials-store'
 import { STATE_KEY, NONCE_KEY } from '../constants'
 import { Storage } from '../storage'
 import { EventHandler } from '../event-handler'
@@ -28,6 +29,7 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
     redirectUri: string
     responseType: string
     keyStore: KeyStore
+    credentialsStore: CredentialsStore
 
     constructor({ clientId, redirectUri, responseType }: VerifiablePresentationsParams) {
       this.oauth = oauth
@@ -36,6 +38,7 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
       this.redirectUri = redirectUri
       this.responseType = responseType || 'vp_token'
       this.keyStore = new KeyStore(eventHandler, storage)
+      this.credentialsStore = new CredentialsStore(eventHandler, storage)
     }
 
     async parseVerifiablePresentationAuthorization(location: Location): Promise<VerifiablePresentationSuccess> {
@@ -61,6 +64,24 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
         redirect_uri,
         response_mode,
         response_type,
+      }
+    }
+
+    async generatePresentation({
+      request,
+      redirect_uri
+    }: VerifiablePresentationSuccess): Promise<PresentationParams> {
+      const { presentation_definition } = await parseVerifiablePresentationRequest(request)
+      const url = new URL(redirect_uri)
+
+      console.log(presentation_definition)
+
+      const presentation = await this.credentialsStore.presentation(presentation_definition)
+      console.log(presentation)
+      return {
+        credentials: [],
+        vp_token: '',
+        presentation_submission: ''
       }
     }
 
@@ -157,5 +178,29 @@ function parseVerifiablePresentationsParams(params: URLSearchParams): Promise<Ve
     redirect_uri,
     response_mode,
     response_type
+  })
+}
+
+function parseVerifiablePresentationRequest(request: string): Promise<{ presentation_definition: PresentationDefinition }> {
+  let decodedRequest
+  try {
+    decodedRequest = decodeJwt(request)
+  } catch (error) {
+    return Promise.reject(new OauthError({
+      error: 'unkown_error',
+      error_description: (error as Error).toString()
+    }))
+  }
+
+  const presentation_definition = decodedRequest['presentation_definition']
+  if (!presentation_definition) {
+    return Promise.reject(new OauthError({
+      error: 'unkown_error',
+      error_description: 'presentation_definition parameter is missing in VerifiablePresentations request.'
+    }))
+  }
+
+  return Promise.resolve({
+    presentation_definition
   })
 }
