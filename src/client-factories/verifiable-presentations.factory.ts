@@ -2,7 +2,7 @@ import { SignJWT, decodeJwt } from "jose";
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, PresentationDefinition, VerifiablePresentationSuccess } from "../oauth-responses"
 import { KeyStore } from '../key-store'
-import { CredentialsStore, PresentationCredentials } from '../credentials-store'
+import { Credential, CredentialsStore, PresentationCredentials } from '../credentials-store'
 import { STATE_KEY, NONCE_KEY } from '../constants'
 import { Storage } from '../storage'
 import { EventHandler } from '../event-handler'
@@ -87,12 +87,13 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
     async generatePresentation({
       request,
       redirect_uri
-    }: VerifiablePresentationSuccess): Promise<PresentationResult> {
+    }: VerifiablePresentationSuccess,
+    credentials?: Array<Credential>): Promise<PresentationResult> {
       const url = new URL(redirect_uri)
 
       const { presentation_definition } = await parseVerifiablePresentationRequest(request)
 
-      const presentation = await this.credentialsStore.presentation(presentation_definition)
+      const presentation = await this.credentialsStore.presentation(presentation_definition, credentials)
 
       return {
         redirect_uri,

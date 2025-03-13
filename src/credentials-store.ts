@@ -94,8 +94,10 @@ export class CredentialsStore {
     })
   }
 
-  async presentation({ id, input_descriptors }: PresentationDefinition): Promise<PresentationCredentials> {
-    const credentials = await this.credentials()
+  async presentation({ id, input_descriptors }: PresentationDefinition, credentials?: Array<Credential>): Promise<PresentationCredentials> {
+    if (!credentials) {
+      credentials = await this.credentials()
+    }
 
     const presentationParams = input_descriptors.reduce((acc: PresentationParams, descriptor: InputDescriptor) => {
       let index = 0

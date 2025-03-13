@@ -67,9 +67,11 @@ export class CredentialsStore {
             });
         });
     }
-    presentation(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ id, input_descriptors }) {
-            const credentials = yield this.credentials();
+    presentation(_a, credentials_1) {
+        return __awaiter(this, arguments, void 0, function* ({ id, input_descriptors }, credentials) {
+            if (!credentials) {
+                credentials = yield this.credentials();
+            }
             const presentationParams = input_descriptors.reduce((acc, descriptor) => {
                 let index = 0;
                 return credentials.reduce((acc, credential) => {
