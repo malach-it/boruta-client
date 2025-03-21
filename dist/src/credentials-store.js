@@ -107,6 +107,7 @@ export class CredentialsStore {
                     }
                 }, acc);
             }, { presentationCredentials: [], descriptorMap: [] });
+            presentationParams.presentationCredentials = yield Promise.all(presentationParams.presentationCredentials.map(credential => credential.disclosedCredential(input_descriptors)));
             return {
                 credentials: presentationParams.presentationCredentials,
                 vp_token: yield this.generateVpToken(presentationParams, 'vp_token~' + id),
@@ -139,11 +140,12 @@ export class CredentialsStore {
     }
 }
 export class Credential {
-    constructor({ credentialId, format, credential, claims, sub, }) {
+    constructor({ credentialId, format, credential, claims, disclosures, sub, }) {
         this.credentialId = credentialId;
         this.format = format;
         this.credential = credential;
         this.claims = claims;
+        this.disclosures = disclosures;
         this.sub = sub;
     }
     hasClaim(path) {
@@ -164,6 +166,14 @@ export class Credential {
                         credentialId,
                         format,
                         credential,
+                        disclosures: formattedCredential.disclosures.map(disclosure => {
+                            return {
+                                key: disclosure.key || '',
+                                value: disclosure.value,
+                                // @ts-ignore
+                                encoded: disclosure._encoded
+                            };
+                        }),
                         claims: formattedCredential.disclosures.map(({ key, value }) => {
                             return { key, value: value || '' };
                         }),
@@ -179,6 +189,7 @@ export class Credential {
                     credentialId,
                     format,
                     credential,
+                    disclosures: [],
                     claims: Object.keys(claims.credentialSubject[credentialId]).map(key => {
                         const value = claims.credentialSubject[credentialId][key];
                         return { key, value };
@@ -188,6 +199,30 @@ export class Credential {
                 return new Credential(params);
             }
             return Promise.reject(new Error('Unsupported format.'));
+        });
+    }
+    disclosedCredential(inputDescriptors) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const credential = yield Credential.fromResponse(this.credentialId, this);
+            const disclosures = credential.disclosures.filter(disclosure => {
+                return !inputDescriptors.some(descriptor => {
+                    return descriptor['constraints']['fields'].some(field => {
+                        return field['path'].some(path => {
+                            return path.replace(/^\$\./, '') == disclosure.key;
+                        });
+                    });
+                });
+            });
+            credential.claims = credential.claims.filter(claim => {
+                return !disclosures.map(({ key }) => key).includes(claim.key || '');
+            });
+            credential.disclosures = credential.disclosures.filter(disclosure => {
+                return !disclosures.map(({ key }) => key).includes(disclosure.key);
+            });
+            disclosures.forEach(disclosure => {
+                credential.credential = credential.credential.replace(disclosure.encoded + '~', '');
+            });
+            return credential;
         });
     }
 }

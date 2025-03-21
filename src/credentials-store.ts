@@ -140,6 +140,12 @@ export class CredentialsStore {
       }, acc)
     }, { presentationCredentials: [], descriptorMap: [] })
 
+    presentationParams.presentationCredentials = await Promise.all(
+      presentationParams.presentationCredentials.map(
+        credential => credential.disclosedCredential(input_descriptors)
+      )
+    )
+
     return {
       credentials: presentationParams.presentationCredentials,
       vp_token: await this.generateVpToken(presentationParams, 'vp_token~' + id),
@@ -173,17 +179,25 @@ type CredentialParams = {
   credentialId: string
   format: string
   credential: string
+  disclosures: Array<Disclosure>
   claims: Array<{ key: string | undefined, value: string | Object }>
   sub: string
 }
 
 type CredentialClaim = { key: string | undefined, value: string | Object }
 
+type Disclosure = {
+  key: string
+  value: unknown
+  encoded: string
+}
+
 export class Credential {
   credentialId: string
   format: string
   credential: string
   claims: Array<CredentialClaim>
+  disclosures: Array<Disclosure>
   sub: string
 
   constructor({
@@ -191,12 +205,14 @@ export class Credential {
     format,
     credential,
     claims,
+    disclosures,
     sub,
   }: CredentialParams) {
     this.credentialId = credentialId
     this.format = format
     this.credential = credential
     this.claims = claims
+    this.disclosures = disclosures
     this.sub = sub
   }
 
@@ -224,6 +240,14 @@ export class Credential {
           credentialId,
           format,
           credential,
+          disclosures: formattedCredential.disclosures.map(disclosure => {
+            return {
+              key: disclosure.key || '',
+              value: disclosure.value,
+              // @ts-ignore
+              encoded: disclosure._encoded as string
+            }
+          }),
           claims: formattedCredential.disclosures.map(({ key, value }) => {
             return { key, value: value as string || '' }
           }),
@@ -239,6 +263,7 @@ export class Credential {
         credentialId,
         format,
         credential,
+        disclosures: [],
         claims: Object.keys(claims.credentialSubject[credentialId]).map(key => {
           const value: string | Object = claims.credentialSubject[credentialId][key]
           return { key, value }
@@ -249,6 +274,29 @@ export class Credential {
     }
 
     return Promise.reject(new Error('Unsupported format.'))
+  }
+
+  async disclosedCredential(inputDescriptors: Array<InputDescriptor>): Promise<Credential> {
+    const credential = await Credential.fromResponse(this.credentialId, this)
+    const disclosures = credential.disclosures.filter(disclosure => {
+      return !inputDescriptors.some(descriptor => {
+        return descriptor['constraints']['fields'].some(field => {
+          return field['path'].some(path => {
+            return path.replace(/^\$\./, '') == disclosure.key
+          })
+        })
+      })
+    })
+    credential.claims = credential.claims.filter(claim => {
+      return !disclosures.map(({ key }) => key).includes(claim.key || '')
+    })
+    credential.disclosures = credential.disclosures.filter(disclosure => {
+      return !disclosures.map(({ key }) => key).includes(disclosure.key)
+    })
+    disclosures.forEach(disclosure => {
+      credential.credential = credential.credential.replace(disclosure.encoded + '~', '')
+    })
+    return credential
   }
 }
 
