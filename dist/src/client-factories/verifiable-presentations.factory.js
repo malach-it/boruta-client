@@ -33,7 +33,10 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
                 const params = new URLSearchParams(location.search);
                 const parsedPresentation = yield parseVerifiablePresentationsParams(params);
                 if (!parsedPresentation) {
-                    return Promise.reject('Presentation success.');
+                    return Promise.reject(new OauthError({
+                        error: 'unkown_error',
+                        error_description: 'Presentation success.'
+                    }));
                 }
                 const { request, presentation_definition, client_id, redirect_uri, response_mode, response_type, } = parsedPresentation;
                 return {

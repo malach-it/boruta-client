@@ -63,12 +63,12 @@ export function createPreauthorizedCodeClient({ oauth, storage }: PreauthorizedC
       this.scope = scope || ''
     }
 
-    async state() {
-      const current = storage.get<string>(STATE_KEY)
+    async state(): Promise<string> {
+      const current = await storage.get<string>(STATE_KEY)
       if (current) return current
 
       const state = (Math.random() + 1).toString(36).substring(4)
-      storage.store(STATE_KEY, state)
+      await storage.store(STATE_KEY, state)
       return state
     }
 
@@ -123,7 +123,10 @@ export function createPreauthorizedCodeClient({ oauth, storage }: PreauthorizedC
 
     getToken():Promise<TokenSuccess> {
       if (!this.credentialOffer) {
-        return Promise.reject('Must perform a credential offer to get a preauthorized code.')
+        return Promise.reject(new OauthError({
+          error: 'unknown_error',
+          error_description: 'Must perform a credential offer to get a preauthorized code.'
+        }))
       }
       const { oauth: { api, tokenPath = '' } } = this
       const body = {

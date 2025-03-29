@@ -9,7 +9,7 @@ export function createRevokeClient({ oauth }) {
         revoke(token) {
             const { revokePath } = oauth;
             if (!revokePath)
-                return Promise.reject();
+                return Promise.reject(new Error('revokePath parameter is required.'));
             const { clientId, clientSecret } = this;
             const data = {
                 client_id: this.clientId,

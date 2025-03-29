@@ -32,11 +32,11 @@ export function createPreauthorizedCodeClient({ oauth, storage }) {
         }
         state() {
             return __awaiter(this, void 0, void 0, function* () {
-                const current = storage.get(STATE_KEY);
+                const current = yield storage.get(STATE_KEY);
                 if (current)
                     return current;
                 const state = (Math.random() + 1).toString(36).substring(4);
-                storage.store(STATE_KEY, state);
+                yield storage.store(STATE_KEY, state);
                 return state;
             });
         }
@@ -74,7 +74,10 @@ export function createPreauthorizedCodeClient({ oauth, storage }) {
         }
         getToken() {
             if (!this.credentialOffer) {
-                return Promise.reject('Must perform a credential offer to get a preauthorized code.');
+                return Promise.reject(new OauthError({
+                    error: 'unknown_error',
+                    error_description: 'Must perform a credential offer to get a preauthorized code.'
+                }));
             }
             const { oauth: { api, tokenPath = '' } } = this;
             const body = {

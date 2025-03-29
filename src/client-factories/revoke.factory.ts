@@ -31,7 +31,7 @@ export function createRevokeClient({ oauth }: RevokeFactoryParams) {
 
     revoke(token: string): Promise<void> {
       const { revokePath } = oauth
-      if (!revokePath) return Promise.reject()
+      if (!revokePath) return Promise.reject(new Error('revokePath parameter is required.'))
 
       const { clientId, clientSecret } = this
       const data: RevokePostData = {

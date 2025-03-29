@@ -61,7 +61,10 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
       const parsedPresentation = await parseVerifiablePresentationsParams(params)
 
       if (!parsedPresentation) {
-        return Promise.reject('Presentation success.')
+        return Promise.reject(new OauthError({
+          error: 'unkown_error',
+          error_description: 'Presentation success.'
+        }))
       }
 
       const {
