@@ -13,6 +13,8 @@ This library gives the ability to follow the OAuth 2.0 flows. Here is the curren
 - [ ] resource owner password credentials grant
 - [ ] introspect
 - [x] revoke
+- [x] OpenID for Verifiable Credentials Issuance
+- [x] OpenID for Verifiable Presentations
 
 ## Installation
 
