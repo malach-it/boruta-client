@@ -48,7 +48,7 @@ client.getToken().then(console.log)
 
 ## Code of Conduct
 
-This product community follows the code of conduct available [here](https://io.malach.it/code-of-conduct.html)
+This product community follows the code of conduct available [here](CODE_OF_CONDUCT.md)
 
 ## License
 
