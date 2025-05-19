@@ -94,7 +94,7 @@ export class CredentialsStore {
     })
   }
 
-  async presentation({ id, input_descriptors }: PresentationDefinition, credentials?: Array<Credential>): Promise<PresentationCredentials> {
+  async presentation(keyIdentifier: string, { id, input_descriptors }: PresentationDefinition, credentials?: Array<Credential>): Promise<PresentationCredentials> {
     if (!credentials) {
       credentials = await this.credentials()
     }
@@ -148,7 +148,7 @@ export class CredentialsStore {
 
     return {
       credentials: presentationParams.presentationCredentials,
-      vp_token: await this.generateVpToken(presentationParams, 'vp_token~' + id),
+      vp_token: await this.generateVpToken(presentationParams, keyIdentifier),
       presentation_submission: await this.generatePresentationSubmission(presentationParams, 'presentation_submission~' + id)
     }
   }

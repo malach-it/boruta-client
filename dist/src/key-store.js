@@ -10,25 +10,36 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 import { SignJWT } from "jose";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { exportJWK, importJWK, generateKeyPair } from "jose";
-import { PUBLIC_KEY_STORAGE_KEY, PRIVATE_KEY_STORAGE_KEY } from './constants';
+import { KEY_PAIR_STORAGE_KEY } from './constants';
 export class KeyStore {
     constructor(eventHandler, storage) {
         this.storage = storage;
         this.eventHandler = eventHandler;
     }
-    hasKey() {
+    listKeyIdentifiers() {
         return __awaiter(this, void 0, void 0, function* () {
-            return !!(yield this.publicKeyJwk()) && !!(yield this.privateKeyJwk());
+            const keys = ((yield this.storage.get(KEY_PAIR_STORAGE_KEY)) || []);
+            return keys.map(({ identifier }) => identifier);
         });
     }
-    publicKeyJwk() {
+    hasKey(identifier) {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.storage.get(PUBLIC_KEY_STORAGE_KEY);
+            return !!(yield this.publicKeyJwk(identifier)) && !!(yield this.privateKeyJwk(identifier));
         });
     }
-    publicKey() {
+    publicKeyJwk(requestedIdentifier) {
         return __awaiter(this, void 0, void 0, function* () {
-            const publicKeyJwk = yield this.publicKeyJwk();
+            var _a;
+            if (!requestedIdentifier)
+                return null;
+            const keys = yield this.storage.get(KEY_PAIR_STORAGE_KEY);
+            return ((_a = (keys || [])
+                .find(({ identifier }) => identifier === requestedIdentifier)) === null || _a === void 0 ? void 0 : _a.publicKeyJwk) || null;
+        });
+    }
+    publicKey(identifier) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const publicKeyJwk = yield this.publicKeyJwk(identifier);
             if (publicKeyJwk) {
                 // @ts-ignore
                 return importJWK(publicKeyJwk, 'ES256').catch(() => {
@@ -38,14 +49,19 @@ export class KeyStore {
             return Promise.resolve({ type: 'undefined' });
         });
     }
-    privateKeyJwk() {
+    privateKeyJwk(requestedIdentifier) {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.storage.get(PRIVATE_KEY_STORAGE_KEY);
+            var _a;
+            if (!requestedIdentifier)
+                return null;
+            const keys = yield this.storage.get(KEY_PAIR_STORAGE_KEY);
+            return ((_a = (keys || [])
+                .find(({ identifier }) => identifier === requestedIdentifier)) === null || _a === void 0 ? void 0 : _a.privateKeyJwk) || null;
         });
     }
-    privateKey() {
+    privateKey(identifier) {
         return __awaiter(this, void 0, void 0, function* () {
-            const privateKeyJwk = yield this.privateKeyJwk();
+            const privateKeyJwk = yield this.privateKeyJwk(identifier);
             if (privateKeyJwk) {
                 // @ts-ignore
                 return importJWK(privateKeyJwk, 'ES256').catch(() => {
@@ -55,15 +71,16 @@ export class KeyStore {
             return Promise.resolve({ type: 'undefined' });
         });
     }
-    upsertKeyPair(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ publicKeyJwk, privateKeyJwk }) {
-            yield this.storage.store(PUBLIC_KEY_STORAGE_KEY, publicKeyJwk);
-            yield this.storage.store(PRIVATE_KEY_STORAGE_KEY, privateKeyJwk);
+    storeKeyPair(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ publicKeyJwk, privateKeyJwk, identifier }) {
+            const keys = (yield this.storage.get(KEY_PAIR_STORAGE_KEY)) || [];
+            keys.push({ identifier, publicKeyJwk, privateKeyJwk });
+            yield this.storage.store(KEY_PAIR_STORAGE_KEY, keys);
         });
     }
     sign(payload, eventKey) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { privateKey, did } = yield this.extractKeys(eventKey);
+            const { privateKey, did } = yield this.extractKey(eventKey);
             return new SignJWT(Object.assign({ "iss": did, "sub": did }, payload))
                 .setProtectedHeader({
                 alg: 'ES256',
@@ -73,36 +90,60 @@ export class KeyStore {
                 .sign(privateKey);
         });
     }
-    extractKeys(eventKey) {
+    extractKey(identifier) {
         return __awaiter(this, void 0, void 0, function* () {
-            this.eventHandler.dispatch('extract_key-request', eventKey);
+            this.eventHandler.dispatch('extract_key-request', identifier);
             return new Promise((resolve, reject) => {
-                this.eventHandler.listen('extract_key-approval', eventKey, () => {
-                    return doExtractKeys(this).then(resolve).catch(reject);
-                });
+                const handleApproval = () => {
+                    return doExtractKey(identifier, this).then(resolve).catch(reject);
+                };
+                this.eventHandler.remove('extract_key-approval', identifier, handleApproval);
+                this.eventHandler.listen('extract_key-approval', identifier, handleApproval);
+            });
+        });
+    }
+    extractDid(identifier) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return doExtractDid(identifier, this);
+        });
+    }
+    removeKey(identifier) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.eventHandler.dispatch('remove_key-request', identifier);
+            return new Promise((resolve, reject) => {
+                const handleApproval = () => {
+                    return doRemoveKey(identifier, this).then(resolve).catch(reject);
+                };
+                this.eventHandler.remove('remove_key-approval', identifier, handleApproval);
+                this.eventHandler.listen('remove_key-approval', identifier, handleApproval);
             });
         });
     }
 }
-function doExtractKeys(keyStore) {
+function doExtractKey(identifier, keyStore) {
     return __awaiter(this, void 0, void 0, function* () {
-        let publicKeyJwk = yield keyStore.publicKeyJwk();
+        let publicKeyJwk = yield keyStore.publicKeyJwk(identifier);
         let publicKey = { type: 'undefined' };
         let privateKey = { type: 'undefined' };
         let did = '';
         let keyFound = false;
         function generateNewKeyPair() {
             return __awaiter(this, void 0, void 0, function* () {
-                const { privateKey, publicKey } = yield generateKeyPair("ES256", { extractable: true });
-                publicKeyJwk = yield exportJWK(publicKey);
-                const privateKeyJwk = yield exportJWK(privateKey);
-                yield keyStore.upsertKeyPair({ publicKeyJwk, privateKeyJwk });
-                return { privateKey, publicKey };
+                keyStore.eventHandler.dispatch('generate_key-request', identifier);
+                return new Promise(resolve => {
+                    keyStore.eventHandler.listen('generate_key-approval', identifier, () => __awaiter(this, void 0, void 0, function* () {
+                        const { privateKey, publicKey } = yield generateKeyPair("ES256", { extractable: true });
+                        publicKeyJwk = yield exportJWK(publicKey);
+                        const privateKeyJwk = yield exportJWK(privateKey);
+                        yield keyStore.storeKeyPair({ identifier, publicKeyJwk, privateKeyJwk });
+                        return resolve({ privateKey, publicKey });
+                    }));
+                });
             });
         }
-        if (yield keyStore.hasKey()) {
-            publicKey = yield keyStore.publicKey();
-            privateKey = yield keyStore.privateKey();
+        if (yield keyStore.hasKey(identifier)) {
+            publicKey = yield keyStore.publicKey(identifier);
+            privateKey = yield keyStore.privateKey(identifier);
             keyFound = publicKey.type !== 'undefined' && privateKey.type !== 'undefined';
         }
         if (!keyFound) {
@@ -115,6 +156,60 @@ function doExtractKeys(keyStore) {
             throw new Error('Could not extract key pair.');
         }
         did = EbsiWallet.createDid("NATURAL_PERSON", publicKeyJwk);
-        return { publicKey, privateKey, did };
+        return { identifier, publicKey, privateKey, did };
     });
+}
+function doExtractDid(identifier, keyStore) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let publicKeyJwk = yield keyStore.publicKeyJwk(identifier);
+        let publicKey = { type: 'undefined' };
+        let privateKey = { type: 'undefined' };
+        let did = '';
+        let keyFound = false;
+        function generateNewKeyPair() {
+            return __awaiter(this, void 0, void 0, function* () {
+                keyStore.eventHandler.dispatch('generate_key-request', identifier);
+                return new Promise(resolve => {
+                    keyStore.eventHandler.listen('generate_key-approval', identifier, () => __awaiter(this, void 0, void 0, function* () {
+                        const { privateKey, publicKey } = yield generateKeyPair("ES256", { extractable: true });
+                        publicKeyJwk = yield exportJWK(publicKey);
+                        const privateKeyJwk = yield exportJWK(privateKey);
+                        yield keyStore.storeKeyPair({ identifier, publicKeyJwk, privateKeyJwk });
+                        return resolve({ publicKey });
+                    }));
+                });
+            });
+        }
+        if (yield keyStore.hasKey(identifier)) {
+            publicKey = yield keyStore.publicKey(identifier);
+            keyFound = publicKey.type !== 'undefined';
+        }
+        if (!keyFound) {
+            const { publicKey: newPublicKey } = yield generateNewKeyPair();
+            publicKey = newPublicKey;
+            keyFound = publicKey.type !== 'undefined';
+        }
+        if (!keyFound || !publicKeyJwk) {
+            throw new Error('Could not extract did.');
+        }
+        return EbsiWallet.createDid("NATURAL_PERSON", publicKeyJwk);
+    });
+}
+function doRemoveKey(requestedIdentifier, keyStore) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const keys = (yield keyStore.storage.get(KEY_PAIR_STORAGE_KEY)) || [];
+        const keyToRemove = keys.find(({ identifier }) => identifier === requestedIdentifier);
+        if (!keyToRemove)
+            return keys.map(({ identifier }) => identifier);
+        keys.splice(keys.indexOf(keyToRemove), 1);
+        yield keyStore.storage.store(KEY_PAIR_STORAGE_KEY, keys);
+        return keys.map(({ identifier }) => identifier);
+    });
+}
+class KeyPair {
+    constructor({ publicKeyJwk, privateKeyJwk, identifier }) {
+        this.publicKeyJwk = publicKeyJwk;
+        this.privateKeyJwk = privateKeyJwk;
+        this.identifier = identifier;
+    }
 }

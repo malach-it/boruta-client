@@ -21,4 +21,9 @@ export class BrowserEventHandler {
             this.window.addEventListener(`${type}~${key}`, callback);
         });
     }
+    remove(type, key, callback) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.window.removeEventListener(`${type}~${key}`, callback);
+        });
+    }
 }

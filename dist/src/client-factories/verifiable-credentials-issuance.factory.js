@@ -62,13 +62,13 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
                 });
             });
         }
-        getCredentialParams(eventKey, credentialIdentifier, format) {
+        getCredentialParams(keyIdentifier, credentialIdentifier, format) {
             return __awaiter(this, void 0, void 0, function* () {
                 const payload = {
                     iat: (Date.now() / 1000),
                     aud: this.oauth.host
                 };
-                const proofJwt = yield this.keyStore.sign(payload, eventKey);
+                const proofJwt = yield this.keyStore.sign(payload, keyIdentifier);
                 const proof = {
                     proof_type: 'jwt',
                     jwt: proofJwt
@@ -80,10 +80,10 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
                 };
             });
         }
-        getCredential(_a, credentialIdentifier_1, format_1) {
-            return __awaiter(this, arguments, void 0, function* ({ access_token: accessToken, }, credentialIdentifier, format) {
+        getCredential(keyIdentifier_1, _a, credentialIdentifier_1, format_1) {
+            return __awaiter(this, arguments, void 0, function* (keyIdentifier, { access_token: accessToken, }, credentialIdentifier, format) {
                 const { oauth: { api, credentialPath = '' } } = this;
-                const body = yield this.getCredentialParams(accessToken, credentialIdentifier, format);
+                const body = yield this.getCredentialParams(keyIdentifier, credentialIdentifier, format);
                 return api.post(credentialPath, body, {
                     headers: {
                         'Authorization': `Bearer ${accessToken}`

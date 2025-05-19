@@ -50,11 +50,11 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
                 };
             });
         }
-        generatePresentation(_a, credentials_1) {
-            return __awaiter(this, arguments, void 0, function* ({ request, redirect_uri }, credentials) {
+        generatePresentation(keyIdentifier_1, _a, credentials_1) {
+            return __awaiter(this, arguments, void 0, function* (keyIdentifier, { request, redirect_uri }, credentials) {
                 const url = new URL(redirect_uri);
                 const { presentation_definition } = yield parseVerifiablePresentationRequest(request);
-                const presentation = yield this.credentialsStore.presentation(presentation_definition, credentials);
+                const presentation = yield this.credentialsStore.presentation(keyIdentifier, presentation_definition, credentials);
                 return Object.assign({ redirect_uri }, presentation);
             });
         }
