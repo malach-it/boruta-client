@@ -33,18 +33,41 @@ export class CustomEventHandler {
     }
     dispatch(type_1) {
         return __awaiter(this, arguments, void 0, function* (type, key = '', payload) {
-            this.events[this.eventKey(type, key)] = payload || true;
+            if (!this.events[this.eventKey(type, key)]) {
+                this.events[this.eventKey(type, key)] = {};
+                Object.defineProperties(this.events[this.eventKey(type, key)], {
+                    payload: {
+                        set(target) {
+                            this.callbacks.forEach((callback) => callback(target));
+                        }
+                    }
+                });
+                this.events[this.eventKey(type, key)].payload = payload || true;
+            }
+            else {
+                this.events[this.eventKey(type, key)].payload = payload || true;
+            }
         });
     }
     listen(type, key, callback) {
         return __awaiter(this, void 0, void 0, function* () {
-            Object.defineProperties(this.events, {
-                [this.eventKey(type, key)]: {
-                    set(target) {
-                        callback(target);
+            var _a, _b;
+            if (!this.events[this.eventKey(type, key)]) {
+                this.events[this.eventKey(type, key)] = {};
+                Object.defineProperties(this.events[this.eventKey(type, key)], {
+                    payload: {
+                        set(target) {
+                            this.callbacks.forEach((callback) => callback(target));
+                        }
                     }
-                }
-            });
+                });
+                this.events[this.eventKey(type, key)].callbacks = this.events[this.eventKey(type, key)].callbacks || [];
+                (_a = this.events[this.eventKey(type, key)].callbacks) === null || _a === void 0 ? void 0 : _a.push(callback);
+            }
+            else {
+                this.events[this.eventKey(type, key)].callbacks = this.events[this.eventKey(type, key)].callbacks || [];
+                (_b = this.events[this.eventKey(type, key)].callbacks) === null || _b === void 0 ? void 0 : _b.push(callback);
+            }
         });
     }
     remove(type, key, callback) {

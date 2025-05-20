@@ -37,24 +37,48 @@ export class BrowserEventHandler implements EventHandler {
 
 export class CustomEventHandler implements EventHandler {
   // @ts-ignore
-  events: { [key: string]: any }
+  events: { [key: string]: { payload?: any, callbacks?: any[] } }
 
   constructor () {
     this.events = {}
   }
 
   async dispatch (type: StoreEventType, key: string = '', payload?: unknown): Promise<void> {
-    this.events[this.eventKey(type, key)] = payload || true
+    if (!this.events[this.eventKey(type, key)]) {
+      this.events[this.eventKey(type, key)] = {}
+
+      Object.defineProperties(this.events[this.eventKey(type, key)], {
+        payload: {
+          set (target) {
+            this.callbacks.forEach((callback: Function) => callback(target))
+          }
+        }
+      })
+
+      this.events[this.eventKey(type, key)].payload = payload || true
+    } else {
+      this.events[this.eventKey(type, key)].payload = payload || true
+    }
   }
 
   async listen (type: StoreEventType, key: string, callback: Function): Promise<void> {
-    Object.defineProperties(this.events, {
-      [this.eventKey(type, key)]: {
-        set (target) {
-          callback(target)
+    if (!this.events[this.eventKey(type, key)]) {
+      this.events[this.eventKey(type, key)] = {}
+
+      Object.defineProperties(this.events[this.eventKey(type, key)], {
+        payload: {
+          set (target) {
+            this.callbacks.forEach((callback: Function) => callback(target))
+          }
         }
-      }
-    })
+      })
+
+      this.events[this.eventKey(type, key)].callbacks = this.events[this.eventKey(type, key)].callbacks || []
+      this.events[this.eventKey(type, key)].callbacks?.push(callback)
+    } else {
+      this.events[this.eventKey(type, key)].callbacks = this.events[this.eventKey(type, key)].callbacks || []
+      this.events[this.eventKey(type, key)].callbacks?.push(callback)
+    }
   }
 
   async remove (type: StoreEventType, key: string, callback: Function): Promise<void> {
