@@ -67,8 +67,8 @@ export class CredentialsStore {
             });
         });
     }
-    presentation(keyIdentifier_1, _a, credentials_1) {
-        return __awaiter(this, arguments, void 0, function* (keyIdentifier, { id, input_descriptors }, credentials) {
+    presentation(_a, credentials_1) {
+        return __awaiter(this, arguments, void 0, function* ({ id, input_descriptors }, credentials) {
             if (!credentials) {
                 credentials = yield this.credentials();
             }
@@ -110,7 +110,7 @@ export class CredentialsStore {
             presentationParams.presentationCredentials = yield Promise.all(presentationParams.presentationCredentials.map(credential => credential.disclosedCredential(input_descriptors)));
             return {
                 credentials: presentationParams.presentationCredentials,
-                vp_token: yield this.generateVpToken(presentationParams, keyIdentifier),
+                vp_token: yield this.generateVpToken(presentationParams, id),
                 presentation_submission: yield this.generatePresentationSubmission(presentationParams, 'presentation_submission~' + id)
             };
         });

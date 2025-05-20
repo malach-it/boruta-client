@@ -88,20 +88,20 @@ export class KeyStore {
       .sign(privateKey)
   }
 
-  async extractKey(identifier: string): Promise<{
+  async extractKey(eventKey: string): Promise<{
     identifier: string,
     privateKey: KeyLike,
     publicKey: KeyLike,
     did: string
   }> {
-    this.eventHandler.dispatch('extract_key-request', identifier)
+    this.eventHandler.dispatch('extract_key-request', eventKey)
 
     return new Promise((resolve, reject) => {
-      const handleApproval = () => {
+      const handleApproval = (identifier: string) => {
         return doExtractKey(identifier, this).then(resolve).catch(reject)
       }
-      this.eventHandler.remove('extract_key-approval', identifier, handleApproval)
-      this.eventHandler.listen('extract_key-approval', identifier, handleApproval)
+      this.eventHandler.remove('extract_key-approval', eventKey, handleApproval)
+      this.eventHandler.listen('extract_key-approval', eventKey, handleApproval)
     })
   }
 

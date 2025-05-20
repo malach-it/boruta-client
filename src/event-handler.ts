@@ -10,7 +10,7 @@ export type StoreEventType = 'insert_credential-request' |
   'extract_key-approval'
 
 export interface EventHandler {
-  dispatch(type: StoreEventType, key: string, payload?: unknown): Promise<void>
+  dispatch(type: StoreEventType, key?: string, payload?: unknown): Promise<void>
   listen(type: StoreEventType, key: string, callback: Function): Promise<void>
   remove(type: StoreEventType, key: string, callback: Function): Promise<void>
 }
@@ -22,7 +22,7 @@ export class BrowserEventHandler implements EventHandler {
     this.window = window
   }
 
-  async dispatch(type: StoreEventType, key: string): Promise<void> {
+  async dispatch(type: StoreEventType, key: string = ''): Promise<void> {
     this.window.dispatchEvent(new Event(`${type}~${key}`))
   }
 
@@ -43,7 +43,7 @@ export class CustomEventHandler implements EventHandler {
     this.events = {}
   }
 
-  async dispatch (type: StoreEventType, key: string, payload: unknown): Promise<void> {
+  async dispatch (type: StoreEventType, key: string = '', payload?: unknown): Promise<void> {
     this.events[this.eventKey(type, key)] = payload || true
   }
 
@@ -57,7 +57,7 @@ export class CustomEventHandler implements EventHandler {
     })
   }
 
-  async remove (type: StoreEventType, key: string, callback: () => void): Promise<void> {
+  async remove (type: StoreEventType, key: string, callback: Function): Promise<void> {
     delete this.events[this.eventKey(type, key)]
   }
 

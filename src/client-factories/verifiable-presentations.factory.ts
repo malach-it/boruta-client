@@ -87,7 +87,7 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
       }
     }
 
-    async generatePresentation(keyIdentifier: string, {
+    async generatePresentation({
       request,
       redirect_uri
     }: VerifiablePresentationSuccess,
@@ -96,7 +96,7 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
 
       const { presentation_definition } = await parseVerifiablePresentationRequest(request)
 
-      const presentation = await this.credentialsStore.presentation(keyIdentifier, presentation_definition, credentials)
+      const presentation = await this.credentialsStore.presentation(presentation_definition, credentials)
 
       return {
         redirect_uri,

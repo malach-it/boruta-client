@@ -90,15 +90,15 @@ export class KeyStore {
                 .sign(privateKey);
         });
     }
-    extractKey(identifier) {
+    extractKey(eventKey) {
         return __awaiter(this, void 0, void 0, function* () {
-            this.eventHandler.dispatch('extract_key-request', identifier);
+            this.eventHandler.dispatch('extract_key-request', eventKey);
             return new Promise((resolve, reject) => {
-                const handleApproval = () => {
+                const handleApproval = (identifier) => {
                     return doExtractKey(identifier, this).then(resolve).catch(reject);
                 };
-                this.eventHandler.remove('extract_key-approval', identifier, handleApproval);
-                this.eventHandler.listen('extract_key-approval', identifier, handleApproval);
+                this.eventHandler.remove('extract_key-approval', eventKey, handleApproval);
+                this.eventHandler.listen('extract_key-approval', eventKey, handleApproval);
             });
         });
     }

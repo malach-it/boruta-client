@@ -11,8 +11,8 @@ export class BrowserEventHandler {
     constructor(window) {
         this.window = window;
     }
-    dispatch(type, key) {
-        return __awaiter(this, void 0, void 0, function* () {
+    dispatch(type_1) {
+        return __awaiter(this, arguments, void 0, function* (type, key = '') {
             this.window.dispatchEvent(new Event(`${type}~${key}`));
         });
     }
@@ -31,8 +31,8 @@ export class CustomEventHandler {
     constructor() {
         this.events = {};
     }
-    dispatch(type, key, payload) {
-        return __awaiter(this, void 0, void 0, function* () {
+    dispatch(type_1) {
+        return __awaiter(this, arguments, void 0, function* (type, key = '', payload) {
             this.events[this.eventKey(type, key)] = payload || true;
         });
     }
