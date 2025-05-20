@@ -27,3 +27,32 @@ export class BrowserEventHandler {
         });
     }
 }
+export class CustomEventHandler {
+    constructor() {
+        this.events = {};
+    }
+    dispatch(type, key, payload) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.events[this.eventKey(type, key)] = payload || true;
+        });
+    }
+    listen(type, key, callback) {
+        return __awaiter(this, void 0, void 0, function* () {
+            Object.defineProperties(this.events, {
+                [this.eventKey(type, key)]: {
+                    set(target) {
+                        callback(target);
+                    }
+                }
+            });
+        });
+    }
+    remove(type, key, callback) {
+        return __awaiter(this, void 0, void 0, function* () {
+            delete this.events[this.eventKey(type, key)];
+        });
+    }
+    eventKey(type, key) {
+        return `${type}-${key}`;
+    }
+}
