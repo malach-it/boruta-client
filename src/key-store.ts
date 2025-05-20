@@ -138,9 +138,9 @@ async function doExtractKey(identifier: string, keyStore: KeyStore): Promise<{
     privateKey: KeyLike,
     publicKey: KeyLike
   }> {
-    keyStore.eventHandler.dispatch('generate_key-request', identifier)
+    keyStore.eventHandler.dispatch('generate_key-request', '')
     return new Promise(resolve => {
-      keyStore.eventHandler.listen('generate_key-approval', identifier, async () => {
+      keyStore.eventHandler.listen('generate_key-approval', '', async () => {
         const { privateKey, publicKey } = await generateKeyPair("ES256", { extractable: true })
         publicKeyJwk = await exportJWK(publicKey)
         const privateKeyJwk = await exportJWK(privateKey)

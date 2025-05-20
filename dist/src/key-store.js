@@ -129,9 +129,9 @@ function doExtractKey(identifier, keyStore) {
         let keyFound = false;
         function generateNewKeyPair() {
             return __awaiter(this, void 0, void 0, function* () {
-                keyStore.eventHandler.dispatch('generate_key-request', identifier);
+                keyStore.eventHandler.dispatch('generate_key-request', '');
                 return new Promise(resolve => {
-                    keyStore.eventHandler.listen('generate_key-approval', identifier, () => __awaiter(this, void 0, void 0, function* () {
+                    keyStore.eventHandler.listen('generate_key-approval', '', () => __awaiter(this, void 0, void 0, function* () {
                         const { privateKey, publicKey } = yield generateKeyPair("ES256", { extractable: true });
                         publicKeyJwk = yield exportJWK(publicKey);
                         const privateKeyJwk = yield exportJWK(privateKey);

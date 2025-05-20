@@ -38,7 +38,8 @@ export class CustomEventHandler {
                 Object.defineProperties(this.events[this.eventKey(type, key)], {
                     payload: {
                         set(target) {
-                            this.callbacks.forEach((callback) => callback(target));
+                            var _a;
+                            (_a = this.callbacks) === null || _a === void 0 ? void 0 : _a.forEach((callback) => callback(target));
                         }
                     }
                 });
@@ -57,7 +58,8 @@ export class CustomEventHandler {
                 Object.defineProperties(this.events[this.eventKey(type, key)], {
                     payload: {
                         set(target) {
-                            this.callbacks.forEach((callback) => callback(target));
+                            var _a;
+                            (_a = this.callbacks) === null || _a === void 0 ? void 0 : _a.forEach((callback) => callback(target));
                         }
                     }
                 });

@@ -50,7 +50,7 @@ export class CustomEventHandler implements EventHandler {
       Object.defineProperties(this.events[this.eventKey(type, key)], {
         payload: {
           set (target) {
-            this.callbacks.forEach((callback: Function) => callback(target))
+            this.callbacks?.forEach((callback: Function) => callback(target))
           }
         }
       })
@@ -68,7 +68,7 @@ export class CustomEventHandler implements EventHandler {
       Object.defineProperties(this.events[this.eventKey(type, key)], {
         payload: {
           set (target) {
-            this.callbacks.forEach((callback: Function) => callback(target))
+            this.callbacks?.forEach((callback: Function) => callback(target))
           }
         }
       })
