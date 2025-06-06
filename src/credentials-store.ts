@@ -141,9 +141,9 @@ export class CredentialsStore {
     }, { presentationCredentials: [], descriptorMap: [] })
 
     presentationParams.presentationCredentials = await Promise.all(
-      presentationParams.presentationCredentials.map(
-        credential => credential.disclosedCredential(input_descriptors)
-      )
+      presentationParams.presentationCredentials
+        .filter((e, index) => presentationParams.presentationCredentials.indexOf(e) == index)
+        .map(credential => credential.disclosedCredential(input_descriptors))
     )
 
     return {

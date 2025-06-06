@@ -39,7 +39,9 @@ export class CustomEventHandler {
                     payload: {
                         set(target) {
                             var _a;
-                            (_a = this.callbacks) === null || _a === void 0 ? void 0 : _a.forEach((callback) => callback(target));
+                            (_a = this.callbacks) === null || _a === void 0 ? void 0 : _a.forEach((callback) => {
+                                callback(target);
+                            });
                         }
                     }
                 });

@@ -107,7 +107,9 @@ export class CredentialsStore {
                     }
                 }, acc);
             }, { presentationCredentials: [], descriptorMap: [] });
-            presentationParams.presentationCredentials = yield Promise.all(presentationParams.presentationCredentials.map(credential => credential.disclosedCredential(input_descriptors)));
+            presentationParams.presentationCredentials = yield Promise.all(presentationParams.presentationCredentials
+                .filter((e, index) => presentationParams.presentationCredentials.indexOf(e) == index)
+                .map(credential => credential.disclosedCredential(input_descriptors)));
             return {
                 credentials: presentationParams.presentationCredentials,
                 vp_token: yield this.generateVpToken(presentationParams, id),
