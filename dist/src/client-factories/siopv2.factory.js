@@ -29,7 +29,7 @@ export function createSiopv2Client({ oauth, eventHandler, storage }) {
                     }));
                 }
                 const params = new URLSearchParams(location.search);
-                const { client_id, redirect_uri, request, response_mode, response_type, scope } = yield parseSiopv2Params(params);
+                const { client_id, code_secret, redirect_uri, request, response_mode, response_type, scope } = yield parseSiopv2Params(params);
                 if (!oauth.jwksPath) {
                     return Promise.reject(new OauthError({
                         error: 'unkown_error',
@@ -65,6 +65,7 @@ export function createSiopv2Client({ oauth, eventHandler, storage }) {
                 return {
                     id_token,
                     client_id,
+                    code_secret,
                     redirect_uri,
                     request,
                     response_mode,
@@ -159,10 +160,18 @@ function parseSiopv2Params(params) {
             error_description: 'response_type parameter is missing in Siopv2 response location.'
         }));
     }
+    const code_secret = params.get('code_secret');
+    if (!code_secret) {
+        return Promise.reject(new OauthError({
+            error: 'unkown_error',
+            error_description: 'code_secret parameter is missing in Siopv2 response location.'
+        }));
+    }
     const scope = params.get('scope') || undefined;
     return Promise.resolve({
         id_token: '',
         client_id,
+        code_secret,
         redirect_uri,
         request,
         response_mode,

@@ -88,15 +88,16 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
     }
 
     async generatePresentation({
+      code_secret,
       request,
       redirect_uri
-    }: VerifiablePresentationSuccess,
+    }: VerifiablePresentationSuccess & { code_secret: string },
     credentials?: Array<Credential>): Promise<PresentationResult> {
       const url = new URL(redirect_uri)
 
       const { presentation_definition } = await parseVerifiablePresentationRequest(request)
 
-      const presentation = await this.credentialsStore.presentation(presentation_definition, credentials)
+      const presentation = await this.credentialsStore.presentation(presentation_definition, credentials, code_secret)
 
       return {
         redirect_uri,

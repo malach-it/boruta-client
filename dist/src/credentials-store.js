@@ -7,7 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { decodeJwt } from 'jose';
+import { decodeJwt, EncryptJWT } from 'jose';
 import { decodeSdJwt } from '@sd-jwt/decode';
 import { CREDENTIALS_KEY } from './constants';
 import { KeyStore } from './key-store';
@@ -67,8 +67,8 @@ export class CredentialsStore {
             });
         });
     }
-    presentation(_a, credentials_1) {
-        return __awaiter(this, arguments, void 0, function* ({ id, input_descriptors }, credentials) {
+    presentation(_a, credentials_1, code_secret_1) {
+        return __awaiter(this, arguments, void 0, function* ({ id, input_descriptors }, credentials, code_secret) {
             if (!credentials) {
                 credentials = yield this.credentials();
             }
@@ -112,15 +112,18 @@ export class CredentialsStore {
                 .map(credential => credential.disclosedCredential(input_descriptors)));
             return {
                 credentials: presentationParams.presentationCredentials,
-                vp_token: yield this.generateVpToken(presentationParams, id),
+                vp_token: yield this.generateVpToken(id, presentationParams, code_secret),
                 presentation_submission: yield this.generatePresentationSubmission(presentationParams, 'presentation_submission~' + id)
             };
         });
     }
-    generateVpToken(_a, eventKey_1) {
-        return __awaiter(this, arguments, void 0, function* ({ presentationCredentials }, eventKey) {
+    generateVpToken(id_1, _a, code_secret_1) {
+        return __awaiter(this, arguments, void 0, function* (id, { presentationCredentials }, code_secret) {
+            if (!code_secret) {
+                throw new Error("code_secret is required");
+            }
             const payload = {
-                'id': eventKey,
+                'id': id,
                 '@context': [
                     'https://www.w3.org/2018/credentials/v1'
                 ],
@@ -129,7 +132,9 @@ export class CredentialsStore {
                 ],
                 'verifiableCredential': presentationCredentials.map(({ credential }) => credential)
             };
-            return this.keyStore.sign(payload, eventKey);
+            return new EncryptJWT(payload)
+                .setProtectedHeader({ alg: "dir", enc: "A256CBC-HS512" })
+                .encrypt(new TextEncoder().encode(code_secret));
         });
     }
     generatePresentationSubmission(_a, eventKey_1) {

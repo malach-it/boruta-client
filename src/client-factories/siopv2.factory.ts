@@ -51,6 +51,7 @@ export function createSiopv2Client({ oauth, eventHandler, storage }: Siopv2Facto
       const params = new URLSearchParams(location.search)
       const {
         client_id,
+        code_secret,
         redirect_uri,
         request,
         response_mode,
@@ -97,6 +98,7 @@ export function createSiopv2Client({ oauth, eventHandler, storage }: Siopv2Facto
       return {
         id_token,
         client_id,
+        code_secret,
         redirect_uri,
         request,
         response_mode,
@@ -194,11 +196,19 @@ function parseSiopv2Params(params: URLSearchParams): Promise<Siopv2Success> {
       error_description: 'response_type parameter is missing in Siopv2 response location.'
     }))
   }
+  const code_secret = params.get('code_secret')
+  if (!code_secret) {
+    return Promise.reject(new OauthError({
+      error: 'unkown_error',
+      error_description: 'code_secret parameter is missing in Siopv2 response location.'
+    }))
+  }
   const scope = params.get('scope') || undefined
 
   return Promise.resolve({
     id_token: '',
     client_id,
+    code_secret,
     redirect_uri,
     request,
     response_mode,

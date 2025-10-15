@@ -1,4 +1,4 @@
-import { decodeJwt } from 'jose'
+import { decodeJwt, EncryptJWT } from 'jose'
 import { decodeSdJwt } from '@sd-jwt/decode'
 
 import { CredentialSuccess, PresentationDefinition, InputDescriptor } from './oauth-responses'
@@ -94,7 +94,7 @@ export class CredentialsStore {
     })
   }
 
-  async presentation({ id, input_descriptors }: PresentationDefinition, credentials?: Array<Credential>): Promise<PresentationCredentials> {
+  async presentation({ id, input_descriptors }: PresentationDefinition, credentials?: Array<Credential>, code_secret?: string): Promise<PresentationCredentials> {
     if (!credentials) {
       credentials = await this.credentials()
     }
@@ -148,14 +148,17 @@ export class CredentialsStore {
 
     return {
       credentials: presentationParams.presentationCredentials,
-      vp_token: await this.generateVpToken(presentationParams, id),
+      vp_token: await this.generateVpToken(id, presentationParams, code_secret),
       presentation_submission: await this.generatePresentationSubmission(presentationParams, 'presentation_submission~' + id)
     }
   }
 
-  async generateVpToken({ presentationCredentials }: PresentationParams, eventKey: string): Promise<string> {
+  async generateVpToken(id: string, { presentationCredentials }: PresentationParams, code_secret?: string): Promise<string> {
+    if (!code_secret) {
+      throw new Error("code_secret is required")
+    }
     const payload = {
-      'id': eventKey,
+      'id': id,
       '@context': [
         'https://www.w3.org/2018/credentials/v1'
       ],
@@ -164,7 +167,9 @@ export class CredentialsStore {
       ],
       'verifiableCredential': presentationCredentials.map(({ credential }) => credential)
     }
-    return this.keyStore.sign(payload, eventKey)
+    return new EncryptJWT(payload)
+      .setProtectedHeader({ alg: "dir", enc: "A256CBC-HS512" })
+      .encrypt(new TextEncoder().encode(code_secret))
   }
 
   async generatePresentationSubmission({ descriptorMap }: PresentationParams, eventKey: string): Promise<string> {
