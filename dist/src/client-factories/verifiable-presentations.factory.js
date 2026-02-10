@@ -7,7 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { decodeJwt } from "jose";
+import { EncryptJWT, importJWK, jwtDecrypt } from "jose";
 import { OauthError } from "../oauth-responses";
 import { KeyStore } from '../key-store';
 import { CredentialsStore } from '../credentials-store';
@@ -52,10 +52,13 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
         }
         generatePresentation(_a, credentials_1) {
             return __awaiter(this, arguments, void 0, function* ({ request, redirect_uri }, credentials) {
-                const url = new URL(redirect_uri);
-                const { presentation_definition } = yield parseVerifiablePresentationRequest(request);
+                const { presentation_definition, authorization_server_encryption_key, direct_post_encryption_alg } = yield parseVerifiablePresentationRequest(request);
                 const presentation = yield this.credentialsStore.presentation(presentation_definition, credentials);
-                return Object.assign({ redirect_uri }, presentation);
+                const response = authorization_server_encryption_key && (yield new EncryptJWT(presentation)
+                    .setProtectedHeader({ alg: direct_post_encryption_alg, enc: "A256GCM" })
+                    .encrypt(yield importJWK(authorization_server_encryption_key, direct_post_encryption_alg)));
+                return Object.assign({ response,
+                    redirect_uri }, presentation);
             });
         }
         state() {
@@ -162,24 +165,30 @@ function parseVerifiablePresentationsParams(params) {
     });
 }
 function parseVerifiablePresentationRequest(request) {
-    let decodedRequest;
-    try {
-        decodedRequest = decodeJwt(request);
-    }
-    catch (error) {
-        return Promise.reject(new OauthError({
-            error: 'unkown_error',
-            error_description: error.toString()
-        }));
-    }
-    const presentation_definition = decodedRequest['presentation_definition'];
-    if (!presentation_definition) {
-        return Promise.reject(new OauthError({
-            error: 'unkown_error',
-            error_description: 'presentation_definition parameter is missing in VerifiablePresentations request.'
-        }));
-    }
-    return Promise.resolve({
-        presentation_definition
+    return __awaiter(this, void 0, void 0, function* () {
+        let decodedRequest;
+        const { privateKey } = JSON.parse(localStorage.getItem("encryptionKeyPair") || "{}");
+        try {
+            const { payload } = yield jwtDecrypt(request, yield importJWK(privateKey, "ECDH-ES"));
+            decodedRequest = payload;
+        }
+        catch (error) {
+            return Promise.reject(new OauthError({
+                error: 'unkown_error',
+                error_description: error.toString()
+            }));
+        }
+        const presentation_definition = decodedRequest['presentation_definition'];
+        if (!presentation_definition) {
+            return Promise.reject(new OauthError({
+                error: 'unkown_error',
+                error_description: 'presentation_definition parameter is missing in VerifiablePresentations request.'
+            }));
+        }
+        return Promise.resolve({
+            authorization_server_encryption_key: decodedRequest['authorization_server_encryption_key'],
+            direct_post_encryption_alg: decodedRequest['direct_post_encryption_alg'],
+            presentation_definition
+        });
     });
 }
