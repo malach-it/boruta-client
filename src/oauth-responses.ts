@@ -49,15 +49,18 @@ export interface TokenSuccess {
   expires_in: number
   refresh_token?: string
   state?: string
+  encrypted_response?: string
   authorization_details?: object
 }
 
 export interface CredentialSuccess {
-  format: string
-  credential: string
+  format?: string
+  credential?: string
+  encrypted_response?: string
 }
 
 export interface Siopv2Success {
+  response?: string
   id_token: string
   client_id: string
   redirect_uri: string
