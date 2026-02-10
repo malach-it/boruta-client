@@ -1,4 +1,4 @@
-import { SignJWT, decodeJwt } from "jose";
+import { EncryptJWT, importJWK, decodeJwt, JWK } from "jose";
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, PresentationDefinition, VerifiablePresentationSuccess } from "../oauth-responses"
 import { KeyStore } from '../key-store'
@@ -25,6 +25,7 @@ export type VerifiablePresentationResult = VerifiablePresentationSuccess & {
 
 type PresentationResult = PresentationCredentials & {
   redirect_uri: string
+  response: string
 }
 
 export function createVerifiablePresentationsClient({ oauth, eventHandler, storage }: VerifiablePresentationsFactoryParams) {
@@ -92,13 +93,20 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
       redirect_uri
     }: VerifiablePresentationSuccess,
     credentials?: Array<Credential>): Promise<PresentationResult> {
-      const url = new URL(redirect_uri)
-
-      const { presentation_definition } = await parseVerifiablePresentationRequest(request)
+      const {
+        presentation_definition,
+        authorization_server_encryption_key,
+        direct_post_encryption_alg
+      } = await parseVerifiablePresentationRequest(request)
 
       const presentation = await this.credentialsStore.presentation(presentation_definition, credentials)
 
+      const response = authorization_server_encryption_key && await new EncryptJWT(presentation)
+        .setProtectedHeader({ alg: direct_post_encryption_alg, enc: "A256GCM" })
+        .encrypt(await importJWK(authorization_server_encryption_key, direct_post_encryption_alg))
+
       return {
+        response,
         redirect_uri,
         ...presentation
       }
@@ -216,7 +224,11 @@ async function parseVerifiablePresentationsParams(params: URLSearchParams): Prom
   })
 }
 
-function parseVerifiablePresentationRequest(request: string): Promise<{ presentation_definition: PresentationDefinition }> {
+function parseVerifiablePresentationRequest(request: string): Promise<{
+  presentation_definition: PresentationDefinition
+  authorization_server_encryption_key: JWK
+  direct_post_encryption_alg: string
+}> {
   let decodedRequest
   try {
     decodedRequest = decodeJwt(request)
@@ -236,6 +248,8 @@ function parseVerifiablePresentationRequest(request: string): Promise<{ presenta
   }
 
   return Promise.resolve({
+    authorization_server_encryption_key: decodedRequest['authorization_server_encryption_key'],
+    direct_post_encryption_alg: decodedRequest['direct_post_encryption_alg'],
     presentation_definition
   })
 }

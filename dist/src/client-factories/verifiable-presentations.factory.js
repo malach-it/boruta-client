@@ -7,7 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { decodeJwt } from "jose";
+import { EncryptJWT, importJWK, decodeJwt } from "jose";
 import { OauthError } from "../oauth-responses";
 import { KeyStore } from '../key-store';
 import { CredentialsStore } from '../credentials-store';
@@ -52,10 +52,13 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
         }
         generatePresentation(_a, credentials_1) {
             return __awaiter(this, arguments, void 0, function* ({ request, redirect_uri }, credentials) {
-                const url = new URL(redirect_uri);
-                const { presentation_definition } = yield parseVerifiablePresentationRequest(request);
+                const { presentation_definition, authorization_server_encryption_key, direct_post_encryption_alg } = yield parseVerifiablePresentationRequest(request);
                 const presentation = yield this.credentialsStore.presentation(presentation_definition, credentials);
-                return Object.assign({ redirect_uri }, presentation);
+                const response = authorization_server_encryption_key && (yield new EncryptJWT(presentation)
+                    .setProtectedHeader({ alg: direct_post_encryption_alg, enc: "A256GCM" })
+                    .encrypt(yield importJWK(authorization_server_encryption_key, direct_post_encryption_alg)));
+                return Object.assign({ response,
+                    redirect_uri }, presentation);
             });
         }
         state() {
@@ -180,6 +183,8 @@ function parseVerifiablePresentationRequest(request) {
         }));
     }
     return Promise.resolve({
+        authorization_server_encryption_key: decodedRequest['authorization_server_encryption_key'],
+        direct_post_encryption_alg: decodedRequest['direct_post_encryption_alg'],
         presentation_definition
     });
 }
