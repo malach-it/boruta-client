@@ -84,12 +84,15 @@ export function createSiopv2Client({ oauth, eventHandler, storage }: Siopv2Facto
       //   }
       // })
 
+      const { publicKey } = JSON.parse(localStorage.getItem("encryptionKeyPair") || "{}")
       const now = Math.floor((new Date()) as unknown as number / 1000)
       const payload = {
         "aud": redirect_uri,
         "nonce": "nonce",
         "exp": now + 600,
-        "iat": now
+        "iat": now,
+        "client_encryption_key": publicKey,
+        "client_encryption_alg": "ECDH-ES"
       }
 
       const id_token = await this.keyStore.sign(payload, client_id)
