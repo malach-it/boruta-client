@@ -1,4 +1,4 @@
-import { EncryptJWT, importJWK, decodeJwt, JWK } from "jose";
+import { EncryptJWT, importJWK, JWK, jwtDecrypt } from "jose";
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, PresentationDefinition, VerifiablePresentationSuccess } from "../oauth-responses"
 import { KeyStore } from '../key-store'
@@ -224,14 +224,26 @@ async function parseVerifiablePresentationsParams(params: URLSearchParams): Prom
   })
 }
 
-function parseVerifiablePresentationRequest(request: string): Promise<{
+async function parseVerifiablePresentationRequest(request: string): Promise<{
   presentation_definition: PresentationDefinition
   authorization_server_encryption_key: JWK
   direct_post_encryption_alg: string
 }> {
-  let decodedRequest
+  let decodedRequest: {
+    presentation_definition: PresentationDefinition
+    authorization_server_encryption_key: JWK
+    direct_post_encryption_alg: string
+  }
+
+  const { privateKey } = JSON.parse(localStorage.getItem("encryptionKeyPair") || "{}");
   try {
-    decodedRequest = decodeJwt(request)
+    const { payload } = await jwtDecrypt<{
+      presentation_definition: PresentationDefinition
+      authorization_server_encryption_key: JWK
+      direct_post_encryption_alg: string
+    }>(request, await importJWK(privateKey, "ECDH-ES"))
+
+      decodedRequest = payload
   } catch (error) {
     return Promise.reject(new OauthError({
       error: 'unkown_error',
