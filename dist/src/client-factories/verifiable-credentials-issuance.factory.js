@@ -94,11 +94,29 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
                     proof_type: 'jwt',
                     jwt: proofJwt
                 };
-                return {
-                    credential_identifier: credentialIdentifier,
-                    format,
-                    proof
-                };
+                const authorization_server_encryption_key = JSON.parse(localStorage.getItem("authorizationServerEncryptionKey") || "null");
+                const direct_post_encryption_alg = JSON.parse(localStorage.getItem("directPostEncryptionAlg") || "null");
+                if (authorization_server_encryption_key && direct_post_encryption_alg) {
+                    const params = {
+                        credential_identifier: credentialIdentifier,
+                        format,
+                        proof
+                    };
+                    const encrypted_request = yield new EncryptJWT(params)
+                        .setProtectedHeader({ alg: direct_post_encryption_alg, enc: "A256GCM" })
+                        .encrypt(yield importJWK(authorization_server_encryption_key, direct_post_encryption_alg));
+                    return {
+                        client_id: this.clientId,
+                        encrypted_request,
+                    };
+                }
+                else {
+                    return {
+                        credential_identifier: credentialIdentifier,
+                        format,
+                        proof
+                    };
+                }
             });
         }
         getCredential(_a, credentialIdentifier_1, format_1) {
