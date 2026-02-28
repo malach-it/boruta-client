@@ -1,3 +1,4 @@
+import { EncryptJWT, importJWK } from "jose"
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, PreauthorizedCodeSuccess, TokenSuccess, CredentialSuccess } from "../oauth-responses"
 import { KeyStore } from '../key-store'
@@ -63,13 +64,41 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
     }
 
     async getTokenParams (preauthorizedCode: string) {
-      return {
-        grant_type: this.grantType,
-        client_id: this.clientId,
-        client_secret: this.clientSecret,
-        redirect_uri: this.redirectUri,
-        'pre-authorized_code': preauthorizedCode,
-        scope: this.scope
+      const authorization_server_encryption_key = JSON.parse(
+        localStorage.getItem("authorizationServerEncryptionKey") || "null"
+      )
+      const direct_post_encryption_alg = JSON.parse(
+        localStorage.getItem("directPostEncryptionAlg") || "null"
+      )
+
+      if (authorization_server_encryption_key && direct_post_encryption_alg) {
+        const params = {
+          grant_type: this.grantType,
+          client_secret: this.clientSecret,
+          redirect_uri: this.redirectUri,
+          'pre-authorized_code': preauthorizedCode,
+          scope: this.scope
+        }
+
+        const encrypted_request = await new EncryptJWT(params)
+          .setProtectedHeader({ alg: direct_post_encryption_alg, enc: "A256GCM" })
+          .encrypt(
+            await importJWK(authorization_server_encryption_key, direct_post_encryption_alg)
+          )
+
+        return {
+          client_id: this.clientId,
+          encrypted_request,
+        }
+      } else {
+        return {
+          grant_type: this.grantType,
+          client_id: this.clientId,
+          client_secret: this.clientSecret,
+          redirect_uri: this.redirectUri,
+          'pre-authorized_code': preauthorizedCode,
+          scope: this.scope
+        }
       }
     }
 

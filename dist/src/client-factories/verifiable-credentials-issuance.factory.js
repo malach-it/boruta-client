@@ -7,6 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+import { EncryptJWT, importJWK } from "jose";
 import { OauthError } from "../oauth-responses";
 import { KeyStore } from '../key-store';
 import { CredentialsStore } from '../credentials-store';
@@ -40,14 +41,34 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
         }
         getTokenParams(preauthorizedCode) {
             return __awaiter(this, void 0, void 0, function* () {
-                return {
-                    grant_type: this.grantType,
-                    client_id: this.clientId,
-                    client_secret: this.clientSecret,
-                    redirect_uri: this.redirectUri,
-                    'pre-authorized_code': preauthorizedCode,
-                    scope: this.scope
-                };
+                const authorization_server_encryption_key = JSON.parse(localStorage.getItem("authorizationServerEncryptionKey") || "null");
+                const direct_post_encryption_alg = JSON.parse(localStorage.getItem("directPostEncryptionAlg") || "null");
+                if (authorization_server_encryption_key && direct_post_encryption_alg) {
+                    const params = {
+                        grant_type: this.grantType,
+                        client_secret: this.clientSecret,
+                        redirect_uri: this.redirectUri,
+                        'pre-authorized_code': preauthorizedCode,
+                        scope: this.scope
+                    };
+                    const encrypted_request = yield new EncryptJWT(params)
+                        .setProtectedHeader({ alg: direct_post_encryption_alg, enc: "A256GCM" })
+                        .encrypt(yield importJWK(authorization_server_encryption_key, direct_post_encryption_alg));
+                    return {
+                        client_id: this.clientId,
+                        encrypted_request,
+                    };
+                }
+                else {
+                    return {
+                        grant_type: this.grantType,
+                        client_id: this.clientId,
+                        client_secret: this.clientSecret,
+                        redirect_uri: this.redirectUri,
+                        'pre-authorized_code': preauthorizedCode,
+                        scope: this.scope
+                    };
+                }
             });
         }
         getToken(preauthorizedCode) {
