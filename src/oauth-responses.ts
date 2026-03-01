@@ -54,8 +54,9 @@ export interface TokenSuccess {
 }
 
 export interface CredentialSuccess {
-  format: string
-  credential: string
+  format?: string
+  credential?: string
+  encrypted_response?: string
 }
 
 export interface Siopv2Success {

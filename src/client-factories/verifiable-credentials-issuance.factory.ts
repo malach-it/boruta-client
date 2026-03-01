@@ -180,8 +180,18 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }
-      }).then(({ data }) => {
-        return data
+      }).then(async ({ data }) => {
+        if (data.encrypted_response) {
+          const { privateKey } = JSON.parse(localStorage.getItem("encryptionKeyPair") || "{}")
+
+          const { payload: response } = await jwtDecrypt<TokenSuccess>(
+            data.encrypted_response,
+            await importJWK(privateKey, "ECDH-ES")
+          )
+          return response
+        } else {
+          return data
+        }
       }).catch(({ status, response }) => {
         throw new OauthError({ status, ...response.data })
       }).then(async response => {

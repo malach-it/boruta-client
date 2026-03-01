@@ -134,9 +134,16 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
                     headers: {
                         'Authorization': `Bearer ${accessToken}`
                     }
-                }).then(({ data }) => {
-                    return data;
-                }).catch(({ status, response }) => {
+                }).then((_a) => __awaiter(this, [_a], void 0, function* ({ data }) {
+                    if (data.encrypted_response) {
+                        const { privateKey } = JSON.parse(localStorage.getItem("encryptionKeyPair") || "{}");
+                        const { payload: response } = yield jwtDecrypt(data.encrypted_response, yield importJWK(privateKey, "ECDH-ES"));
+                        return response;
+                    }
+                    else {
+                        return data;
+                    }
+                })).catch(({ status, response }) => {
                     throw new OauthError(Object.assign({ status }, response.data));
                 }).then((response) => __awaiter(this, void 0, void 0, function* () {
                     yield this.credentialsStore.insertCredential(credentialIdentifier, response);
