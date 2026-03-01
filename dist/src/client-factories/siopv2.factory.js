@@ -7,7 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { decodeJwt, EncryptJWT, importJWK } from "jose";
+import { decodeJwt, EncryptJWT, importJWK, jwtVerify } from "jose";
 import { OauthError } from "../oauth-responses";
 import { KeyStore } from '../key-store';
 import { STATE_KEY, NONCE_KEY } from '../constants';
@@ -37,24 +37,32 @@ export function createSiopv2Client({ oauth, eventHandler, storage }) {
                         error_description: 'You must provide server jwks path.'
                     }));
                 }
-                // TODO verify request signature
-                // await oauth.api.get<jwksResponse>(oauth.jwksPath).then(({ data }) => {
-                //   const keys = data.keys
-                //   let jwt
-                //   while (keys.length) {
-                //     const key = keys.pop()
-                //     if (!key) {
-                //       throw new OauthError({
-                //         error: 'unknown_error',
-                //         error_description: 'Request signature could not be verified.'
-                //       })
-                //     }
-                //     console.log(request)
-                //     console.log(key)
-                //     jwt = verify(request, key, (err, decoded) => console.log(decoded))
-                //     console.log(jwt)
-                //   }
-                // })
+                yield oauth.api.get(oauth.jwksPath).then((_a) => __awaiter(this, [_a], void 0, function* ({ data }) {
+                    const keys = data.keys;
+                    let found = false;
+                    while (keys.length) {
+                        const key = keys.pop();
+                        if (!key) {
+                            throw new OauthError({
+                                error: 'unknown_error',
+                                error_description: 'Request signature could not be verified.'
+                            });
+                        }
+                        console.log(request);
+                        console.log(key);
+                        try {
+                            const jwt = yield jwtVerify(request, yield importJWK(key));
+                            console.log(jwt);
+                            found = true;
+                        }
+                        catch (_error) { }
+                    }
+                    if (!found)
+                        throw new OauthError({
+                            error: 'invalid_issuer',
+                            error_description: 'could not verify request signature',
+                        });
+                }));
                 const { publicKey } = JSON.parse(localStorage.getItem("encryptionKeyPair") || "{}");
                 const now = Math.floor((new Date()) / 1000);
                 const payload = {

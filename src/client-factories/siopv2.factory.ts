@@ -1,4 +1,4 @@
-import { decodeJwt, EncryptJWT, importJWK, JWK } from "jose"
+import { decodeJwt, EncryptJWT, importJWK, JWK, jwtVerify } from "jose"
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, Siopv2Success } from "../oauth-responses"
 import { KeyStore } from '../key-store'
@@ -66,24 +66,30 @@ export function createSiopv2Client({ oauth, eventHandler, storage }: Siopv2Facto
         }))
       }
 
-      // TODO verify request signature
-      // await oauth.api.get<jwksResponse>(oauth.jwksPath).then(({ data }) => {
-      //   const keys = data.keys
-      //   let jwt
-      //   while (keys.length) {
-      //     const key = keys.pop()
-      //     if (!key) {
-      //       throw new OauthError({
-      //         error: 'unknown_error',
-      //         error_description: 'Request signature could not be verified.'
-      //       })
-      //     }
-      //     console.log(request)
-      //     console.log(key)
-      //     jwt = verify(request, key, (err, decoded) => console.log(decoded))
-      //     console.log(jwt)
-      //   }
-      // })
+      await oauth.api.get(oauth.jwksPath).then(async ({ data }) => {
+        const keys = data.keys
+        let found = false
+        while (keys.length) {
+          const key = keys.pop()
+          if (!key) {
+            throw new OauthError({
+              error: 'unknown_error',
+              error_description: 'Request signature could not be verified.'
+            })
+          }
+          console.log(request)
+          console.log(key)
+          try {
+            const jwt = await jwtVerify(request, await importJWK(key))
+            console.log(jwt)
+            found = true
+          } catch (_error) {}
+        }
+        if (!found) throw new OauthError({
+          error: 'invalid_issuer',
+          error_description: 'could not verify request signature',
+        })
+      })
 
       const { publicKey } = JSON.parse(localStorage.getItem("encryptionKeyPair") || "{}")
       const now = Math.floor((new Date()) as unknown as number / 1000)
