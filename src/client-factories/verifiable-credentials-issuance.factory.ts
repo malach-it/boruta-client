@@ -127,36 +127,10 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
         jwt: proofJwt
       }
 
-      const authorization_server_encryption_key = JSON.parse(
-        localStorage.getItem("authorizationServerEncryptionKey") || "null"
-      )
-      const direct_post_encryption_alg = JSON.parse(
-        localStorage.getItem("directPostEncryptionAlg") || "null"
-      )
-
-      if (authorization_server_encryption_key && direct_post_encryption_alg) {
-        const params = {
-          credential_identifier: credentialIdentifier,
-          format,
-          proof
-        }
-
-        const encrypted_request = await new EncryptJWT(params)
-          .setProtectedHeader({ alg: direct_post_encryption_alg, enc: "A256GCM" })
-          .encrypt(
-            await importJWK(authorization_server_encryption_key, direct_post_encryption_alg)
-          )
-
-        return {
-          client_id: this.clientId,
-          encrypted_request,
-        }
-      } else {
-        return {
-          credential_identifier: credentialIdentifier,
-          format,
-          proof
-        }
+      return {
+        credential_identifier: credentialIdentifier,
+        format,
+        proof
       }
     }
 
