@@ -74,8 +74,6 @@ export function createSiopv2Client({ oauth, eventHandler, storage }) {
                     "client_encryption_alg": "ECDH-ES"
                 };
                 const { authorization_server_encryption_key, direct_post_encryption_alg } = decodeJwt(request);
-                localStorage.setItem("authorizationServerEncryptionKey", JSON.stringify(authorization_server_encryption_key));
-                localStorage.setItem("directPostEncryptionAlg", JSON.stringify(direct_post_encryption_alg));
                 const id_token = yield this.keyStore.sign(payload, client_id);
                 const response = authorization_server_encryption_key && (yield new EncryptJWT({ id_token })
                     .setProtectedHeader({ alg: direct_post_encryption_alg, enc: "A256GCM" })

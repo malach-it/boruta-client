@@ -110,16 +110,6 @@ export function createSiopv2Client({ oauth, eventHandler, storage }: Siopv2Facto
           direct_post_encryption_alg: string
       }>(request)
 
-      localStorage.setItem(
-        "authorizationServerEncryptionKey",
-        JSON.stringify(authorization_server_encryption_key)
-      )
-
-      localStorage.setItem(
-        "directPostEncryptionAlg",
-        JSON.stringify(direct_post_encryption_alg)
-      )
-
       const id_token = await this.keyStore.sign(payload, client_id)
 
       const response = authorization_server_encryption_key && await new EncryptJWT({ id_token })
