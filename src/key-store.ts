@@ -78,9 +78,9 @@ export class KeyStore {
     return new SignJWT({
       "iss": did,
       "sub": did,
-      "metadata_policies": {
+      "metadata_policy": {
         client_id: {
-          one_of: did
+          one_of: [ did ]
         }
       },
       ...payload
