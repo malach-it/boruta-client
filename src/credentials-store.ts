@@ -1,7 +1,7 @@
 import { decodeJwt } from 'jose'
 import { decodeSdJwt } from '@sd-jwt/decode'
 
-import { CredentialSuccess, PresentationDefinition, InputDescriptor, OauthError } from './oauth-responses'
+import { CredentialSuccess, PresentationDefinition, InputDescriptor } from './oauth-responses'
 import { Storage } from './storage'
 import { EventHandler } from './event-handler'
 import { CREDENTIALS_KEY } from './constants'
@@ -230,12 +230,6 @@ export class Credential {
   }
 
   static async fromResponse(credentialId: string, { format, credential }: CredentialSuccess): Promise<Credential> {
-    if (!format || !credential) {
-      throw new OauthError({
-        error: "invalid_credential",
-        error_description: 'Invalid credential response.'
-      })
-    }
 
     if (format == 'vc+sd-jwt') {
       return decodeSdJwt(

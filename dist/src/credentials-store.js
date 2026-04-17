@@ -9,7 +9,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import { decodeJwt } from 'jose';
 import { decodeSdJwt } from '@sd-jwt/decode';
-import { OauthError } from './oauth-responses';
 import { CREDENTIALS_KEY } from './constants';
 import { KeyStore } from './key-store';
 export class CredentialsStore {
@@ -163,12 +162,6 @@ export class Credential {
     }
     static fromResponse(credentialId_1, _a) {
         return __awaiter(this, arguments, void 0, function* (credentialId, { format, credential }) {
-            if (!format || !credential) {
-                throw new OauthError({
-                    error: "invalid_credential",
-                    error_description: 'Invalid credential response.'
-                });
-            }
             if (format == 'vc+sd-jwt') {
                 return decodeSdJwt(credential, () => { return Promise.resolve(new Uint8Array()); }).then(formattedCredential => {
                     const params = {
