@@ -7,7 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { EncryptJWT, importJWK, jwtDecrypt } from "jose";
+import { EncryptJWT, importJWK, decodeJwt } from "jose";
 import { OauthError } from "../oauth-responses";
 import { KeyStore } from '../key-store';
 import { CredentialsStore } from '../credentials-store';
@@ -165,30 +165,26 @@ function parseVerifiablePresentationsParams(params) {
     });
 }
 function parseVerifiablePresentationRequest(request) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let decodedRequest;
-        const { privateKey } = JSON.parse(localStorage.getItem("encryptionKeyPair") || "{}");
-        try {
-            const { payload } = yield jwtDecrypt(request, yield importJWK(privateKey, "ECDH-ES"));
-            decodedRequest = payload;
-        }
-        catch (error) {
-            return Promise.reject(new OauthError({
-                error: 'unkown_error',
-                error_description: error.toString()
-            }));
-        }
-        const presentation_definition = decodedRequest['presentation_definition'];
-        if (!presentation_definition) {
-            return Promise.reject(new OauthError({
-                error: 'unkown_error',
-                error_description: 'presentation_definition parameter is missing in VerifiablePresentations request.'
-            }));
-        }
-        return Promise.resolve({
-            authorization_server_encryption_key: decodedRequest['authorization_server_encryption_key'],
-            direct_post_encryption_alg: decodedRequest['direct_post_encryption_alg'],
-            presentation_definition
-        });
+    let decodedRequest;
+    try {
+        decodedRequest = decodeJwt(request);
+    }
+    catch (error) {
+        return Promise.reject(new OauthError({
+            error: 'unkown_error',
+            error_description: error.toString()
+        }));
+    }
+    const presentation_definition = decodedRequest['presentation_definition'];
+    if (!presentation_definition) {
+        return Promise.reject(new OauthError({
+            error: 'unkown_error',
+            error_description: 'presentation_definition parameter is missing in VerifiablePresentations request.'
+        }));
+    }
+    return Promise.resolve({
+        authorization_server_encryption_key: decodedRequest['authorization_server_encryption_key'],
+        direct_post_encryption_alg: decodedRequest['direct_post_encryption_alg'],
+        presentation_definition
     });
 }
