@@ -81,7 +81,11 @@ export class KeyStore {
     sign(payload, eventKey) {
         return __awaiter(this, void 0, void 0, function* () {
             const { privateKey, did } = yield this.extractKey(eventKey);
-            return new SignJWT(Object.assign({ "iss": did, "sub": did }, payload))
+            return new SignJWT(Object.assign({ "iss": did, "sub": did, "metadata_policies": {
+                    client_id: {
+                        one_of: did
+                    }
+                } }, payload))
                 .setProtectedHeader({
                 alg: 'ES256',
                 typ: 'JWT',

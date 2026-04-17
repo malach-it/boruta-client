@@ -48,8 +48,6 @@ export function createSiopv2Client({ oauth, eventHandler, storage }) {
                                 error_description: 'Request signature could not be verified.'
                             });
                         }
-                        console.log(request);
-                        console.log(key);
                         try {
                             const jwt = yield jwtVerify(request, yield importJWK(key));
                             console.log(jwt);

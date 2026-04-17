@@ -78,6 +78,11 @@ export class KeyStore {
     return new SignJWT({
       "iss": did,
       "sub": did,
+      "metadata_policies": {
+        client_id: {
+          one_of: did
+        }
+      },
       ...payload
     })
       .setProtectedHeader({
