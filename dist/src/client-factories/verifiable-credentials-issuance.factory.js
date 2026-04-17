@@ -7,7 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { EncryptJWT, importJWK, jwtDecrypt } from "jose";
+import { EncryptJWT, importJWK } from "jose";
 import { OauthError } from "../oauth-responses";
 import { KeyStore } from '../key-store';
 import { CredentialsStore } from '../credentials-store';
@@ -76,16 +76,9 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
                 // TODO throw an error in case of misconfiguration (tokenPath)
                 const { oauth: { api, tokenPath = '' } } = this;
                 const body = yield this.getTokenParams(preauthorizedCode);
-                return api.post(tokenPath, body).then((_a) => __awaiter(this, [_a], void 0, function* ({ data }) {
-                    if (data.encrypted_response) {
-                        const { privateKey } = JSON.parse(localStorage.getItem("encryptionKeyPair") || "{}");
-                        const { payload: response } = yield jwtDecrypt(data.encrypted_response, yield importJWK(privateKey, "ECDH-ES"));
-                        return response;
-                    }
-                    else {
-                        return data;
-                    }
-                })).catch(({ status, response }) => {
+                return api.post(tokenPath, body).then(({ data }) => {
+                    return data;
+                }).catch(({ status, response }) => {
                     throw new OauthError(Object.assign({ status }, response.data));
                 });
             });

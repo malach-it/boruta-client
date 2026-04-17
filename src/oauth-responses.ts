@@ -49,7 +49,6 @@ export interface TokenSuccess {
   expires_in: number
   refresh_token?: string
   state?: string
-  encrypted_response?: string
   authorization_details?: object
 }
 

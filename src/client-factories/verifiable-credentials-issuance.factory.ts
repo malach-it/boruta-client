@@ -1,4 +1,4 @@
-import { EncryptJWT, importJWK, jwtDecrypt } from "jose"
+import { EncryptJWT, importJWK } from "jose"
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, PreauthorizedCodeSuccess, TokenSuccess, CredentialSuccess } from "../oauth-responses"
 import { KeyStore } from '../key-store'
@@ -107,18 +107,8 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
       const { oauth: { api, tokenPath = '' } } = this
       const body = await this.getTokenParams(preauthorizedCode)
 
-      return api.post<TokenSuccess>(tokenPath, body).then(async ({ data }) => {
-        if (data.encrypted_response) {
-          const { privateKey } = JSON.parse(localStorage.getItem("encryptionKeyPair") || "{}")
-
-          const { payload: response } = await jwtDecrypt<TokenSuccess>(
-            data.encrypted_response,
-            await importJWK(privateKey, "ECDH-ES")
-          )
-          return response
-        } else {
-          return data
-        }
+      return api.post<TokenSuccess>(tokenPath, body).then(({ data }) => {
+        return data
       }).catch(({ status, response }) => {
         throw new OauthError({ status, ...response.data })
       })
