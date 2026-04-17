@@ -58,7 +58,6 @@ export interface CredentialSuccess {
 }
 
 export interface Siopv2Success {
-  response?: string
   id_token: string
   client_id: string
   redirect_uri: string

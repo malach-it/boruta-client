@@ -1,4 +1,4 @@
-import { decodeJwt, EncryptJWT, importJWK, JWK, jwtVerify } from "jose"
+import { importJWK, jwtVerify } from "jose"
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, Siopv2Success } from "../oauth-responses"
 import { KeyStore } from '../key-store'
@@ -102,22 +102,9 @@ export function createSiopv2Client({ oauth, eventHandler, storage }: Siopv2Facto
         "client_encryption_alg": "ECDH-ES"
       }
 
-      const {
-        authorization_server_encryption_key,
-        direct_post_encryption_alg
-      } = decodeJwt<{
-          authorization_server_encryption_key: JWK
-          direct_post_encryption_alg: string
-      }>(request)
-
       const id_token = await this.keyStore.sign(payload, client_id)
 
-      const response = authorization_server_encryption_key && await new EncryptJWT({ id_token })
-        .setProtectedHeader({ alg: direct_post_encryption_alg, enc: "A256GCM" })
-        .encrypt(await importJWK(authorization_server_encryption_key, direct_post_encryption_alg))
-
       return {
-        response,
         id_token,
         client_id,
         redirect_uri,
