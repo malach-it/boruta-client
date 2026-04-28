@@ -195,7 +195,7 @@ export class Credential {
                     claims: Object.keys(claims.credentialSubject[credentialId]).map(key => {
                         const value = claims.credentialSubject[credentialId][key];
                         return { key, value };
-                    }),
+                    }).concat([{ key: "type", value: claims.type }]),
                     sub: claims.credentialSubject[credentialId].id
                 };
                 return new Credential(params);
