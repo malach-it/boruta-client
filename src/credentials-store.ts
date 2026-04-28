@@ -13,6 +13,14 @@ export type PresentationCredentials = {
   presentation_submission: string
 }
 
+type Constraint = {
+  path: Array<string>
+  filter?: {
+    type: "array"
+    contains: { const: string }
+  }
+}
+
 type Descriptor = {
   id: string,
   format: string
@@ -20,6 +28,9 @@ type Descriptor = {
   path_nested: {
     format: string
     path: string
+  }
+  constraints?: {
+    fields: Array<Constraint>
   }
 }
 
@@ -104,9 +115,9 @@ export class CredentialsStore {
 
       return credentials.reduce((acc: PresentationParams, credential: Credential) => {
         if (credential.validateFormat(Object.keys(descriptor.format))) {
-          return descriptor.constraints.fields.map((field: { path: Array<string> }) => {
+          return descriptor.constraints?.fields.map((field) => {
             if (
-              credential.hasClaim(field.path[0])
+              credential.hasClaim(field)
             ) {
               const descriptor = {
                 id: credential.credentialId,
@@ -216,12 +227,22 @@ export class Credential {
     this.sub = sub
   }
 
-  hasClaim (path: string): boolean {
+  hasClaim (field: Constraint): boolean {
     const claims = this.claims
-    const pathInfo = path.replace(/^$/, '').split('.')
+    const pathInfo = field.path[0]?.replace(/^$/, '').split('.')
 
     const current = pathInfo.pop()
-    const claim = claims.find(({ key }) => key == current)
+    const claim = claims.find(({ key, value }) => {
+      let isValid = key == current
+
+      if (field.filter?.type == "array") {
+        if (!(Array.isArray(value) && value.includes(field.filter.contains.const))) {
+          isValid = false
+        }
+      }
+
+      return isValid
+    })
     return !!claim
   }
 

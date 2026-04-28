@@ -75,9 +75,10 @@ export class CredentialsStore {
             const presentationParams = input_descriptors.reduce((acc, descriptor) => {
                 let index = 0;
                 return credentials.reduce((acc, credential) => {
+                    var _a;
                     if (credential.validateFormat(Object.keys(descriptor.format))) {
-                        return descriptor.constraints.fields.map((field) => {
-                            if (credential.hasClaim(field.path[0])) {
+                        return (_a = descriptor.constraints) === null || _a === void 0 ? void 0 : _a.fields.map((field) => {
+                            if (credential.hasClaim(field)) {
                                 const descriptor = {
                                     id: credential.credentialId,
                                     path: '$',
@@ -91,9 +92,7 @@ export class CredentialsStore {
                                 index = index + 1;
                                 return { credential, descriptor };
                             }
-                        })
-                            .filter((e) => e)
-                            .reduce((acc, current) => {
+                        }).filter((e) => e).reduce((acc, current) => {
                             if (!current)
                                 return acc;
                             const { credential, descriptor } = current;
@@ -150,11 +149,21 @@ export class Credential {
         this.disclosures = disclosures;
         this.sub = sub;
     }
-    hasClaim(path) {
+    hasClaim(field) {
+        var _a;
         const claims = this.claims;
-        const pathInfo = path.replace(/^$/, '').split('.');
+        const pathInfo = (_a = field.path[0]) === null || _a === void 0 ? void 0 : _a.replace(/^$/, '').split('.');
         const current = pathInfo.pop();
-        const claim = claims.find(({ key }) => key == current);
+        const claim = claims.find(({ key, value }) => {
+            var _a;
+            let isValid = key == current;
+            if (((_a = field.filter) === null || _a === void 0 ? void 0 : _a.type) == "array") {
+                if (!(Array.isArray(value) && value.includes(field.filter.contains.const))) {
+                    isValid = false;
+                }
+            }
+            return isValid;
+        });
         return !!claim;
     }
     validateFormat(formats) {
