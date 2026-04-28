@@ -7,6 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+import { EncryptJWT, importJWK, jwtDecrypt } from "jose";
 import { OauthError } from "../oauth-responses";
 import { KeyStore } from '../key-store';
 import { CredentialsStore } from '../credentials-store';
@@ -40,14 +41,34 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
         }
         getTokenParams(preauthorizedCode) {
             return __awaiter(this, void 0, void 0, function* () {
-                return {
-                    grant_type: this.grantType,
-                    client_id: this.clientId,
-                    client_secret: this.clientSecret,
-                    redirect_uri: this.redirectUri,
-                    'pre-authorized_code': preauthorizedCode,
-                    scope: this.scope
-                };
+                const authorization_server_encryption_key = JSON.parse(localStorage.getItem("authorizationServerEncryptionKey") || "null");
+                const direct_post_encryption_alg = JSON.parse(localStorage.getItem("directPostEncryptionAlg") || "null");
+                if (authorization_server_encryption_key && direct_post_encryption_alg) {
+                    const params = {
+                        grant_type: this.grantType,
+                        client_secret: this.clientSecret,
+                        redirect_uri: this.redirectUri,
+                        'pre-authorized_code': preauthorizedCode,
+                        scope: this.scope
+                    };
+                    const encrypted_request = yield new EncryptJWT(params)
+                        .setProtectedHeader({ alg: direct_post_encryption_alg, enc: "A256GCM" })
+                        .encrypt(yield importJWK(authorization_server_encryption_key, direct_post_encryption_alg));
+                    return {
+                        client_id: this.clientId,
+                        encrypted_request,
+                    };
+                }
+                else {
+                    return {
+                        grant_type: this.grantType,
+                        client_id: this.clientId,
+                        client_secret: this.clientSecret,
+                        redirect_uri: this.redirectUri,
+                        'pre-authorized_code': preauthorizedCode,
+                        scope: this.scope
+                    };
+                }
             });
         }
         getToken(preauthorizedCode) {
@@ -55,9 +76,16 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
                 // TODO throw an error in case of misconfiguration (tokenPath)
                 const { oauth: { api, tokenPath = '' } } = this;
                 const body = yield this.getTokenParams(preauthorizedCode);
-                return api.post(tokenPath, body).then(({ data }) => {
-                    return data;
-                }).catch(({ status, response }) => {
+                return api.post(tokenPath, body).then((_a) => __awaiter(this, [_a], void 0, function* ({ data }) {
+                    if (data.encrypted_response) {
+                        const { privateKey } = JSON.parse(localStorage.getItem("encryptionKeyPair") || "{}");
+                        const { payload: response } = yield jwtDecrypt(data.encrypted_response, yield importJWK(privateKey, "ECDH-ES"));
+                        return response;
+                    }
+                    else {
+                        return data;
+                    }
+                })).catch(({ status, response }) => {
                     throw new OauthError(Object.assign({ status }, response.data));
                 });
             });
@@ -73,11 +101,29 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
                     proof_type: 'jwt',
                     jwt: proofJwt
                 };
-                return {
-                    credential_identifier: credentialIdentifier,
-                    format,
-                    proof
-                };
+                const authorization_server_encryption_key = JSON.parse(localStorage.getItem("authorizationServerEncryptionKey") || "null");
+                const direct_post_encryption_alg = JSON.parse(localStorage.getItem("directPostEncryptionAlg") || "null");
+                if (authorization_server_encryption_key && direct_post_encryption_alg) {
+                    const params = {
+                        credential_identifier: credentialIdentifier,
+                        format,
+                        proof
+                    };
+                    const encrypted_request = yield new EncryptJWT(params)
+                        .setProtectedHeader({ alg: direct_post_encryption_alg, enc: "A256GCM" })
+                        .encrypt(yield importJWK(authorization_server_encryption_key, direct_post_encryption_alg));
+                    return {
+                        client_id: this.clientId,
+                        encrypted_request,
+                    };
+                }
+                else {
+                    return {
+                        credential_identifier: credentialIdentifier,
+                        format,
+                        proof
+                    };
+                }
             });
         }
         getCredential(_a, credentialIdentifier_1, format_1) {
@@ -88,9 +134,16 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
                     headers: {
                         'Authorization': `Bearer ${accessToken}`
                     }
-                }).then(({ data }) => {
-                    return data;
-                }).catch(({ status, response }) => {
+                }).then((_a) => __awaiter(this, [_a], void 0, function* ({ data }) {
+                    if (data.encrypted_response) {
+                        const { privateKey } = JSON.parse(localStorage.getItem("encryptionKeyPair") || "{}");
+                        const { payload: response } = yield jwtDecrypt(data.encrypted_response, yield importJWK(privateKey, "ECDH-ES"));
+                        return response;
+                    }
+                    else {
+                        return data;
+                    }
+                })).catch(({ status, response }) => {
                     throw new OauthError(Object.assign({ status }, response.data));
                 }).then((response) => __awaiter(this, void 0, void 0, function* () {
                     yield this.credentialsStore.insertCredential(credentialIdentifier, response);
