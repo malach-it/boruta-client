@@ -72,8 +72,8 @@ export class CredentialsStore {
             if (!credentials) {
                 credentials = yield this.credentials();
             }
+            let index = 0;
             const presentationParams = input_descriptors.reduce((acc, descriptor) => {
-                let index = 0;
                 return credentials.reduce((acc, credential) => {
                     var _a;
                     if (credential.validateFormat(Object.keys(descriptor.format))) {

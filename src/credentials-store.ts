@@ -110,9 +110,8 @@ export class CredentialsStore {
       credentials = await this.credentials()
     }
 
+    let index = 0
     const presentationParams = input_descriptors.reduce((acc: PresentationParams, descriptor: InputDescriptor) => {
-      let index = 0
-
       return credentials.reduce((acc: PresentationParams, credential: Credential) => {
         if (credential.validateFormat(Object.keys(descriptor.format))) {
           return descriptor.constraints?.fields.map((field) => {
