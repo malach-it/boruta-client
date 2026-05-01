@@ -1,4 +1,4 @@
-import { decodeJwt, EncryptJWT, importJWK, JWK } from "jose"
+import { decodeJwt, EncryptJWT, importJWK, jwtVerify, JWK } from "jose"
 import { BorutaOauth } from "../boruta-oauth"
 import { OauthError, Siopv2Success } from "../oauth-responses"
 import { KeyStore } from '../key-store'

@@ -7,7 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { decodeJwt, EncryptJWT, importJWK } from "jose";
+import { decodeJwt, EncryptJWT, importJWK, jwtVerify } from "jose";
 import { OauthError } from "../oauth-responses";
 import { KeyStore } from '../key-store';
 import { STATE_KEY, NONCE_KEY } from '../constants';
