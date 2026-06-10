@@ -1,4 +1,4 @@
-import { decodeJwt } from 'jose'
+import { CompactEncrypt, compactDecrypt, decodeJwt } from 'jose'
 import { decodeSdJwt } from '@sd-jwt/decode'
 
 import { CredentialSuccess, PresentationDefinition, InputDescriptor } from './oauth-responses'
@@ -6,6 +6,11 @@ import { Storage } from './storage'
 import { EventHandler } from './event-handler'
 import { CREDENTIALS_KEY } from './constants'
 import { KeyStore } from './key-store'
+
+const JWE_KEY_MANAGEMENT_ALGORITHM = 'PBES2-HS256+A128KW'
+const JWE_CONTENT_ENCRYPTION_ALGORITHM = 'A256GCM'
+const encoder = new TextEncoder()
+const decoder = new TextDecoder()
 
 export type PresentationCredentials = {
   credentials: Array<Credential>
@@ -55,17 +60,20 @@ export class CredentialsStore {
 
     return new Promise((resolve, reject) => {
       this.eventHandler.listen('insert_credential-approval', credentialId, () => {
-        return this.doInsertCredential(credentialId, credentialResponse).then(resolve).catch(reject)
+        return this.requestPassword(credentialId)
+          .then(password => this.doInsertCredential(credentialId, credentialResponse, password))
+          .then(resolve)
+          .catch(reject)
       })
     })
   }
 
-  private async doInsertCredential(credentialId: string, credentialResponse: CredentialSuccess): Promise<Array<Credential>> {
-    const credentials = await this.credentials()
+  private async doInsertCredential(credentialId: string, credentialResponse: CredentialSuccess, password: string): Promise<Array<Credential>> {
+    const credentials = await this.credentials(password)
 
     credentials.push(await Credential.fromResponse(credentialId, credentialResponse))
 
-    await this.storage.store(CREDENTIALS_KEY, credentials)
+    await this.storeCredentials(credentials, password)
 
     return credentials
   }
@@ -75,13 +83,16 @@ export class CredentialsStore {
 
     return new Promise((resolve, reject) => {
       this.eventHandler.listen('delete_credential-approval', credential, () => {
-        return this.doDeleteCredential(credential).then(resolve).catch(reject)
+        return this.requestPassword(CREDENTIALS_KEY)
+          .then(password => this.doDeleteCredential(credential, password))
+          .then(resolve)
+          .catch(reject)
       })
     })
   }
 
-  private async doDeleteCredential(credential: string): Promise<Array<Credential>> {
-    const credentials = await this.credentials()
+  private async doDeleteCredential(credential: string, password: string): Promise<Array<Credential>> {
+    const credentials = await this.credentials(password)
 
     const toDelete = credentials.find((e: Credential) => {
       return e.credential == credential
@@ -90,18 +101,58 @@ export class CredentialsStore {
     if (!toDelete) return credentials
 
     credentials.splice(credentials.indexOf(toDelete), 1)
-    await this.storage.store(CREDENTIALS_KEY, credentials)
+    await this.storeCredentials(credentials, password)
 
     return credentials
   }
 
-  async credentials (): Promise<Array<Credential>> {
-    return this.storage.get<Array<CredentialParams>>(CREDENTIALS_KEY).then(credentials => {
+  async credentials (password?: string): Promise<Array<Credential>> {
+    return this.storage.get<Array<StoredCredentialParams>>(CREDENTIALS_KEY).then(async credentials => {
       if (!credentials) return []
 
+      if (credentials.some(isEncryptedCredentialParams)) {
+        const credentialPassword = password || await this.requestPassword(CREDENTIALS_KEY)
+        return Promise.all(
+          credentials.map(async (credentialParams: StoredCredentialParams) => {
+            if (!isEncryptedCredentialParams(credentialParams)) {
+              return Credential.fromResponse(credentialParams.credentialId, credentialParams)
+            }
+
+            const decrypted = await decryptCredential(credentialParams.jwe, credentialPassword)
+            return Credential.fromResponse(decrypted.credentialId, decrypted)
+          })
+        )
+      }
+
       return Promise.all(
-        credentials.map(({ credentialId, format, credential }: CredentialParams) => Credential.fromResponse(credentialId, { format, credential }))
+        (credentials as Array<CredentialParams>).map(({ credentialId, format, credential }: CredentialParams) => Credential.fromResponse(credentialId, { format, credential }))
       )
+    })
+  }
+
+  private async storeCredentials(credentials: Array<Credential>, password: string): Promise<void> {
+    const encryptedCredentials = await Promise.all(
+      credentials.map(credential => encryptCredential(credential, password))
+    )
+
+    await this.storage.store(CREDENTIALS_KEY, encryptedCredentials)
+  }
+
+  private async requestPassword(key: string): Promise<string> {
+    await this.eventHandler.dispatch('access_credential-request', key)
+
+    return new Promise((resolve, reject) => {
+      const handleApproval = (password: unknown) => {
+        if (typeof password !== 'string') {
+          reject(new Error('Credential password approval must provide a password.'))
+          return
+        }
+
+        resolve(password)
+      }
+
+      this.eventHandler.remove('access_credential-approval', key, handleApproval)
+      this.eventHandler.listen('access_credential-approval', key, handleApproval)
     })
   }
 
@@ -194,12 +245,46 @@ type CredentialParams = {
   sub: string
 }
 
+type EncryptedCredentialParams = {
+  jwe: string
+}
+
+type StoredCredentialParams = CredentialParams | EncryptedCredentialParams
+
 type CredentialClaim = { key: string | undefined, value: string | Object }
 
 type Disclosure = {
   key: string
   value: unknown
   encoded: string
+}
+
+function isEncryptedCredentialParams (credential: StoredCredentialParams): credential is EncryptedCredentialParams {
+  return typeof (credential as EncryptedCredentialParams).jwe === 'string'
+}
+
+async function encryptCredential (credential: CredentialParams, password: string): Promise<EncryptedCredentialParams> {
+  const jwe = await new CompactEncrypt(encoder.encode(JSON.stringify({
+    credentialId: credential.credentialId,
+    format: credential.format,
+    credential: credential.credential
+  })))
+    .setProtectedHeader({
+      alg: JWE_KEY_MANAGEMENT_ALGORITHM,
+      enc: JWE_CONTENT_ENCRYPTION_ALGORITHM
+    })
+    .encrypt(encoder.encode(password))
+
+  return { jwe }
+}
+
+async function decryptCredential (jwe: string, password: string): Promise<CredentialParams> {
+  const { plaintext } = await compactDecrypt(jwe, encoder.encode(password), {
+    keyManagementAlgorithms: [JWE_KEY_MANAGEMENT_ALGORITHM],
+    contentEncryptionAlgorithms: [JWE_CONTENT_ENCRYPTION_ALGORITHM]
+  })
+
+  return JSON.parse(decoder.decode(plaintext))
 }
 
 export class Credential {

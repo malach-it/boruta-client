@@ -2,6 +2,8 @@ export type StoreEventType = 'insert_credential-request' |
   'insert_credential-approval' |
   'delete_credential-request' |
   'delete_credential-approval' |
+  'access_credential-request' |
+  'access_credential-approval' |
   'generate_key-request' |
   'generate_key-approval' |
   'remove_key-request' |
@@ -17,21 +19,36 @@ export interface EventHandler {
 
 export class BrowserEventHandler implements EventHandler {
   window: Window
+  listeners: { [key: string]: { callback: Function, listener: EventListener }[] }
 
   constructor (window: Window) {
     this.window = window
+    this.listeners = {}
   }
 
-  async dispatch(type: StoreEventType, key: string = ''): Promise<void> {
-    this.window.dispatchEvent(new Event(`${type}~${key}`))
+  async dispatch(type: StoreEventType, key: string = '', payload?: unknown): Promise<void> {
+    this.window.dispatchEvent(new CustomEvent(`${type}~${key}`, { detail: payload }))
   }
 
-  async listen(type: StoreEventType, key: string, callback: () => void): Promise<void> {
-    this.window.addEventListener(`${type}~${key}`, callback)
+  async listen(type: StoreEventType, key: string, callback: Function): Promise<void> {
+    const eventKey = `${type}~${key}`
+    const listener = ((event: Event) => {
+      callback((event as CustomEvent).detail)
+    }) as EventListener
+
+    this.listeners[eventKey] = this.listeners[eventKey] || []
+    this.listeners[eventKey].push({ callback, listener })
+    this.window.addEventListener(eventKey, listener)
   }
 
-  async remove (type: StoreEventType, key: string, callback: () => void): Promise<void> {
-    this.window.removeEventListener(`${type}~${key}`, callback)
+  async remove (type: StoreEventType, key: string, callback: Function): Promise<void> {
+    const eventKey = `${type}~${key}`
+    const listener = this.listeners[eventKey]?.find(listener => listener.callback === callback)
+
+    if (!listener) return
+
+    this.window.removeEventListener(eventKey, listener.listener)
+    this.listeners[eventKey] = this.listeners[eventKey].filter(listener => listener.callback !== callback)
   }
 }
 

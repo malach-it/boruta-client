@@ -10,20 +10,33 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 export class BrowserEventHandler {
     constructor(window) {
         this.window = window;
+        this.listeners = {};
     }
     dispatch(type_1) {
-        return __awaiter(this, arguments, void 0, function* (type, key = '') {
-            this.window.dispatchEvent(new Event(`${type}~${key}`));
+        return __awaiter(this, arguments, void 0, function* (type, key = '', payload) {
+            this.window.dispatchEvent(new CustomEvent(`${type}~${key}`, { detail: payload }));
         });
     }
     listen(type, key, callback) {
         return __awaiter(this, void 0, void 0, function* () {
-            this.window.addEventListener(`${type}~${key}`, callback);
+            const eventKey = `${type}~${key}`;
+            const listener = ((event) => {
+                callback(event.detail);
+            });
+            this.listeners[eventKey] = this.listeners[eventKey] || [];
+            this.listeners[eventKey].push({ callback, listener });
+            this.window.addEventListener(eventKey, listener);
         });
     }
     remove(type, key, callback) {
         return __awaiter(this, void 0, void 0, function* () {
-            this.window.removeEventListener(`${type}~${key}`, callback);
+            var _a;
+            const eventKey = `${type}~${key}`;
+            const listener = (_a = this.listeners[eventKey]) === null || _a === void 0 ? void 0 : _a.find(listener => listener.callback === callback);
+            if (!listener)
+                return;
+            this.window.removeEventListener(eventKey, listener.listener);
+            this.listeners[eventKey] = this.listeners[eventKey].filter(listener => listener.callback !== callback);
         });
     }
 }

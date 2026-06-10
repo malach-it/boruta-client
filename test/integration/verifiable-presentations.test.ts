@@ -15,9 +15,14 @@ const localStorageCredentials = '[{"credentialId":"BorutaTest","format":"vc+sd-j
 
 class EventHandlerMock implements EventHandler {
   async dispatch(type: StoreEventType, key: string) {}
-  async listen(type: StoreEventType, key: string, callback: () => void) {
-    return callback()
+  async listen(type: StoreEventType, key: string, callback: Function) {
+    if (type == 'access_credential-approval') {
+      return callback('password')
+    }
+
+    return callback(key)
   }
+  async remove(type: StoreEventType, key: string, callback: Function) {}
 }
 
 describe('BorutaOauth', () => {
@@ -25,6 +30,10 @@ describe('BorutaOauth', () => {
   Object.defineProperty(window, 'localStorage', {
     value: stubInterface<Storage>(),
     writable: true
+  })
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: window.localStorage,
+    configurable: true
   })
   const host = 'http://test.host'
   const storage = new BrowserStorage(window)

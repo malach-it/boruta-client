@@ -7,10 +7,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { decodeJwt } from 'jose';
+import { CompactEncrypt, compactDecrypt, decodeJwt } from 'jose';
 import { decodeSdJwt } from '@sd-jwt/decode';
 import { CREDENTIALS_KEY } from './constants';
 import { KeyStore } from './key-store';
+const JWE_KEY_MANAGEMENT_ALGORITHM = 'PBES2-HS256+A128KW';
+const JWE_CONTENT_ENCRYPTION_ALGORITHM = 'A256GCM';
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 export class CredentialsStore {
     constructor(eventHandler, storage) {
         this.eventHandler = eventHandler;
@@ -22,16 +26,19 @@ export class CredentialsStore {
             this.eventHandler.dispatch('insert_credential-request', credentialId);
             return new Promise((resolve, reject) => {
                 this.eventHandler.listen('insert_credential-approval', credentialId, () => {
-                    return this.doInsertCredential(credentialId, credentialResponse).then(resolve).catch(reject);
+                    return this.requestPassword(credentialId)
+                        .then(password => this.doInsertCredential(credentialId, credentialResponse, password))
+                        .then(resolve)
+                        .catch(reject);
                 });
             });
         });
     }
-    doInsertCredential(credentialId, credentialResponse) {
+    doInsertCredential(credentialId, credentialResponse, password) {
         return __awaiter(this, void 0, void 0, function* () {
-            const credentials = yield this.credentials();
+            const credentials = yield this.credentials(password);
             credentials.push(yield Credential.fromResponse(credentialId, credentialResponse));
-            yield this.storage.store(CREDENTIALS_KEY, credentials);
+            yield this.storeCredentials(credentials, password);
             return credentials;
         });
     }
@@ -40,30 +47,65 @@ export class CredentialsStore {
             this.eventHandler.dispatch('delete_credential-request', credential);
             return new Promise((resolve, reject) => {
                 this.eventHandler.listen('delete_credential-approval', credential, () => {
-                    return this.doDeleteCredential(credential).then(resolve).catch(reject);
+                    return this.requestPassword(CREDENTIALS_KEY)
+                        .then(password => this.doDeleteCredential(credential, password))
+                        .then(resolve)
+                        .catch(reject);
                 });
             });
         });
     }
-    doDeleteCredential(credential) {
+    doDeleteCredential(credential, password) {
         return __awaiter(this, void 0, void 0, function* () {
-            const credentials = yield this.credentials();
+            const credentials = yield this.credentials(password);
             const toDelete = credentials.find((e) => {
                 return e.credential == credential;
             });
             if (!toDelete)
                 return credentials;
             credentials.splice(credentials.indexOf(toDelete), 1);
-            yield this.storage.store(CREDENTIALS_KEY, credentials);
+            yield this.storeCredentials(credentials, password);
             return credentials;
         });
     }
-    credentials() {
+    credentials(password) {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.storage.get(CREDENTIALS_KEY).then(credentials => {
+            return this.storage.get(CREDENTIALS_KEY).then((credentials) => __awaiter(this, void 0, void 0, function* () {
                 if (!credentials)
                     return [];
+                if (credentials.some(isEncryptedCredentialParams)) {
+                    const credentialPassword = password || (yield this.requestPassword(CREDENTIALS_KEY));
+                    return Promise.all(credentials.map((credentialParams) => __awaiter(this, void 0, void 0, function* () {
+                        if (!isEncryptedCredentialParams(credentialParams)) {
+                            return Credential.fromResponse(credentialParams.credentialId, credentialParams);
+                        }
+                        const decrypted = yield decryptCredential(credentialParams.jwe, credentialPassword);
+                        return Credential.fromResponse(decrypted.credentialId, decrypted);
+                    })));
+                }
                 return Promise.all(credentials.map(({ credentialId, format, credential }) => Credential.fromResponse(credentialId, { format, credential })));
+            }));
+        });
+    }
+    storeCredentials(credentials, password) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const encryptedCredentials = yield Promise.all(credentials.map(credential => encryptCredential(credential, password)));
+            yield this.storage.store(CREDENTIALS_KEY, encryptedCredentials);
+        });
+    }
+    requestPassword(key) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.eventHandler.dispatch('access_credential-request', key);
+            return new Promise((resolve, reject) => {
+                const handleApproval = (password) => {
+                    if (typeof password !== 'string') {
+                        reject(new Error('Credential password approval must provide a password.'));
+                        return;
+                    }
+                    resolve(password);
+                };
+                this.eventHandler.remove('access_credential-approval', key, handleApproval);
+                this.eventHandler.listen('access_credential-approval', key, handleApproval);
             });
         });
     }
@@ -139,6 +181,33 @@ export class CredentialsStore {
             });
         });
     }
+}
+function isEncryptedCredentialParams(credential) {
+    return typeof credential.jwe === 'string';
+}
+function encryptCredential(credential, password) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const jwe = yield new CompactEncrypt(encoder.encode(JSON.stringify({
+            credentialId: credential.credentialId,
+            format: credential.format,
+            credential: credential.credential
+        })))
+            .setProtectedHeader({
+            alg: JWE_KEY_MANAGEMENT_ALGORITHM,
+            enc: JWE_CONTENT_ENCRYPTION_ALGORITHM
+        })
+            .encrypt(encoder.encode(password));
+        return { jwe };
+    });
+}
+function decryptCredential(jwe, password) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { plaintext } = yield compactDecrypt(jwe, encoder.encode(password), {
+            keyManagementAlgorithms: [JWE_KEY_MANAGEMENT_ALGORITHM],
+            contentEncryptionAlgorithms: [JWE_CONTENT_ENCRYPTION_ALGORITHM]
+        });
+        return JSON.parse(decoder.decode(plaintext));
+    });
 }
 export class Credential {
     constructor({ credentialId, format, credential, claims, disclosures, sub, }) {
