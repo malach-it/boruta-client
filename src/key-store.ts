@@ -1,9 +1,14 @@
-import { SignJWT } from "jose";
+import { CompactEncrypt, compactDecrypt, SignJWT } from "jose";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib"
-import { exportJWK, exportPKCS8, importJWK, generateKeyPair, KeyLike, JWK } from "jose"
+import { exportJWK, importJWK, generateKeyPair, KeyLike, JWK } from "jose"
 import { KEY_PAIR_STORAGE_KEY } from './constants'
 import { Storage } from './storage'
 import { EventHandler } from './event-handler'
+
+const JWE_KEY_MANAGEMENT_ALGORITHM = 'PBES2-HS256+A128KW'
+const JWE_CONTENT_ENCRYPTION_ALGORITHM = 'A256GCM'
+const encoder = new TextEncoder()
+const decoder = new TextDecoder()
 
 export class KeyStore {
   storage: Storage
@@ -15,22 +20,23 @@ export class KeyStore {
   }
 
   async listKeyIdentifiers (): Promise<string[]> {
-    const keys = (await this.storage.get<KeyPair[]>(KEY_PAIR_STORAGE_KEY) || [])
+    const keys = await this.storage.get<KeyPair[] | string[]>(KEY_PAIR_STORAGE_KEY) || []
 
-    return keys.map(({ identifier }) => identifier)
+    if (!keys.length) return []
+
+    if (typeof keys[0] == 'string') return keys as string[]
+
+    return (keys as KeyPair[]).map(({ identifier }) => identifier)
   }
 
   async hasKey (identifier: string) {
-    return !!(await this.publicKeyJwk(identifier)) && !!(await this.privateKeyJwk(identifier))
+    return !!(await this.keyPair(identifier))
   }
 
   async publicKeyJwk (requestedIdentifier: string): Promise<JWK | null> {
     if (!requestedIdentifier) return null
 
-    const keys = await this.storage.get<KeyPair[]>(KEY_PAIR_STORAGE_KEY)
-    return (keys || [])
-      .find(({ identifier }) => identifier === requestedIdentifier)
-      ?.publicKeyJwk || null
+    return (await this.keyPair(requestedIdentifier))?.publicKeyJwk || null
   }
 
   async publicKey (identifier: string): Promise<KeyLike> {
@@ -48,10 +54,7 @@ export class KeyStore {
   async privateKeyJwk (requestedIdentifier: string) {
     if (!requestedIdentifier) return null
 
-    const keys = await this.storage.get<KeyPair[]>(KEY_PAIR_STORAGE_KEY)
-    return (keys || [])
-      .find(({ identifier }) => identifier === requestedIdentifier)
-      ?.privateKeyJwk || null
+    return (await this.keyPair(requestedIdentifier))?.privateKeyJwk || null
   }
 
   async privateKey (identifier: string): Promise<KeyLike> {
@@ -66,10 +69,36 @@ export class KeyStore {
     return Promise.resolve({ type: 'undefined'})
   }
 
-  async storeKeyPair ({ publicKeyJwk, privateKeyJwk, identifier }: KeyPair) {
-    const keys = await this.storage.get<KeyPair[]>(KEY_PAIR_STORAGE_KEY) || []
-    keys.push({ identifier, publicKeyJwk, privateKeyJwk })
-    await this.storage.store(KEY_PAIR_STORAGE_KEY, keys)
+  async keyPair (identifier: string, password?: string): Promise<KeyPairParams | null> {
+    const encryptedKeyPair = await this.storage.get<EncryptedKeyPair>(keyPairStorageKey(identifier))
+
+    if (encryptedKeyPair?.jwe) {
+      if (!password) {
+        throw new Error('Key password approval must provide a password.')
+      }
+
+      return decryptKeyPair(encryptedKeyPair.jwe, password)
+    }
+
+    const keys = await this.storage.get<KeyPairParams[]>(KEY_PAIR_STORAGE_KEY)
+    return (keys || []).find(keyPair => keyPair.identifier === identifier) || null
+  }
+
+  async storeKeyPair ({ publicKeyJwk, privateKeyJwk, identifier }: KeyPairParams, password?: string) {
+    if (!password) {
+      throw new Error('Key password approval must provide a password.')
+    }
+
+    const identifiers = await this.listKeyIdentifiers()
+    if (!identifiers.includes(identifier)) {
+      identifiers.push(identifier)
+      await this.storage.store(KEY_PAIR_STORAGE_KEY, identifiers)
+    }
+
+    await this.storage.store(
+      keyPairStorageKey(identifier),
+      await encryptKeyPair({ identifier, publicKeyJwk, privateKeyJwk }, password)
+    )
   }
 
   async sign(payload: Object, eventKey: string): Promise<string> {
@@ -102,8 +131,9 @@ export class KeyStore {
     this.eventHandler.dispatch('extract_key-request', eventKey)
 
     return new Promise((resolve, reject) => {
-      const handleApproval = (identifier: string) => {
-        return doExtractKey(identifier, this).then(resolve).catch(reject)
+      const handleApproval = (approval: ExtractKeyApproval) => {
+        const { identifier, password } = extractKeyApproval(approval)
+        return doExtractKey(identifier, this, password).then(resolve).catch(reject)
       }
       this.eventHandler.remove('extract_key-approval', eventKey, handleApproval)
       this.eventHandler.listen('extract_key-approval', eventKey, handleApproval)
@@ -111,7 +141,16 @@ export class KeyStore {
   }
 
   async extractDid(identifier: string): Promise<string> {
-    return doExtractDid(identifier, this)
+    this.eventHandler.dispatch('extract_key-request', identifier)
+
+    return new Promise((resolve, reject) => {
+      const handleApproval = (approval: ExtractKeyApproval) => {
+        const { password } = extractKeyApproval(approval, identifier)
+        return doExtractDid(identifier, this, password).then(resolve).catch(reject)
+      }
+      this.eventHandler.remove('extract_key-approval', identifier, handleApproval)
+      this.eventHandler.listen('extract_key-approval', identifier, handleApproval)
+    })
   }
 
   async removeKey(identifier: string): Promise<string[]> {
@@ -127,13 +166,14 @@ export class KeyStore {
   }
 }
 
-async function doExtractKey(identifier: string, keyStore: KeyStore): Promise<{
+async function doExtractKey(identifier: string, keyStore: KeyStore, password?: string): Promise<{
   identifier: string,
   privateKey: KeyLike,
   publicKey: KeyLike,
   did: string
 }> {
-  let publicKeyJwk = await keyStore.publicKeyJwk(identifier)
+  let keyPair = await keyStore.keyPair(identifier, password)
+  let publicKeyJwk = keyPair?.publicKeyJwk
   let publicKey: KeyLike = { type: 'undefined'}
   let privateKey: KeyLike = { type: 'undefined'}
   let did: string = ''
@@ -145,19 +185,20 @@ async function doExtractKey(identifier: string, keyStore: KeyStore): Promise<{
   }> {
     keyStore.eventHandler.dispatch('generate_key-request', '')
     return new Promise(resolve => {
-      keyStore.eventHandler.listen('generate_key-approval', '', async () => {
+      keyStore.eventHandler.listen('generate_key-approval', '', async (approval: GenerateKeyApproval) => {
+        const keyPassword = generateKeyPassword(approval, password)
         const { privateKey, publicKey } = await generateKeyPair("ES256", { extractable: true })
         publicKeyJwk = await exportJWK(publicKey)
         const privateKeyJwk = await exportJWK(privateKey)
-        await keyStore.storeKeyPair({ identifier, publicKeyJwk, privateKeyJwk })
+        await keyStore.storeKeyPair({ identifier, publicKeyJwk, privateKeyJwk }, keyPassword)
         return resolve({ privateKey, publicKey })
       })
     })
   }
 
-  if (await keyStore.hasKey(identifier)) {
-    publicKey = await keyStore.publicKey(identifier)
-    privateKey = await keyStore.privateKey(identifier)
+  if (keyPair) {
+    publicKey = await importPublicKey(keyPair.publicKeyJwk)
+    privateKey = await importPrivateKey(keyPair.privateKeyJwk)
     keyFound = publicKey.type !== 'undefined' && privateKey.type !== 'undefined'
   }
 
@@ -177,11 +218,10 @@ async function doExtractKey(identifier: string, keyStore: KeyStore): Promise<{
   return { identifier, publicKey, privateKey, did }
 }
 
-async function doExtractDid(identifier: string, keyStore: KeyStore): Promise<string> {
-  let publicKeyJwk = await keyStore.publicKeyJwk(identifier)
+async function doExtractDid(identifier: string, keyStore: KeyStore, password?: string): Promise<string> {
+  let keyPair = await keyStore.keyPair(identifier, password)
+  let publicKeyJwk = keyPair?.publicKeyJwk
   let publicKey: KeyLike = { type: 'undefined'}
-  let privateKey: KeyLike = { type: 'undefined'}
-  let did: string = ''
   let keyFound = false
 
   async function generateNewKeyPair (): Promise<{
@@ -189,18 +229,19 @@ async function doExtractDid(identifier: string, keyStore: KeyStore): Promise<str
   }> {
     keyStore.eventHandler.dispatch('generate_key-request', identifier)
     return new Promise(resolve => {
-      keyStore.eventHandler.listen('generate_key-approval', identifier, async () => {
+      keyStore.eventHandler.listen('generate_key-approval', identifier, async (approval: GenerateKeyApproval) => {
+        const keyPassword = generateKeyPassword(approval, password)
         const { privateKey, publicKey } = await generateKeyPair("ES256", { extractable: true })
         publicKeyJwk = await exportJWK(publicKey)
         const privateKeyJwk = await exportJWK(privateKey)
-        await keyStore.storeKeyPair({ identifier, publicKeyJwk, privateKeyJwk })
+        await keyStore.storeKeyPair({ identifier, publicKeyJwk, privateKeyJwk }, keyPassword)
         return resolve({ publicKey })
       })
     })
   }
 
-  if (await keyStore.hasKey(identifier)) {
-    publicKey = await keyStore.publicKey(identifier)
+  if (keyPair) {
+    publicKey = await importPublicKey(keyPair.publicKeyJwk)
     keyFound = publicKey.type !== 'undefined'
   }
 
@@ -218,22 +259,91 @@ async function doExtractDid(identifier: string, keyStore: KeyStore): Promise<str
 }
 
 async function doRemoveKey (requestedIdentifier: string, keyStore: KeyStore): Promise<string[]> {
-  const keys = await keyStore.storage.get<KeyPair[]>(KEY_PAIR_STORAGE_KEY) || []
+  const identifiers = await keyStore.listKeyIdentifiers()
 
-  const keyToRemove = keys.find(({ identifier }) => identifier === requestedIdentifier)
+  if (!identifiers.includes(requestedIdentifier)) return identifiers
 
-  if (!keyToRemove) return keys.map(({ identifier }) => identifier)
+  identifiers.splice(identifiers.indexOf(requestedIdentifier), 1)
+  await keyStore.storage.store(KEY_PAIR_STORAGE_KEY, identifiers)
+  await keyStore.storage.store(keyPairStorageKey(requestedIdentifier), null)
 
-  keys.splice(keys.indexOf(keyToRemove), 1)
-  await keyStore.storage.store(KEY_PAIR_STORAGE_KEY, keys)
-
-  return keys.map(({ identifier }) => identifier)
+  return identifiers
 }
 
 type KeyPairParams = {
   publicKeyJwk: JWK
   privateKeyJwk: JWK
   identifier: string
+}
+
+type EncryptedKeyPair = {
+  jwe: string
+}
+
+type ExtractKeyApproval = string | {
+  identifier?: string
+  password?: string
+}
+
+type GenerateKeyApproval = string | {
+  password?: string
+}
+
+function extractKeyApproval (approval: ExtractKeyApproval, fallbackIdentifier?: string): { identifier: string, password?: string } {
+  if (typeof approval == 'string') {
+    return { identifier: fallbackIdentifier || approval }
+  }
+
+  return {
+    identifier: approval.identifier || fallbackIdentifier || '',
+    password: approval.password
+  }
+}
+
+function generateKeyPassword (approval: GenerateKeyApproval, fallbackPassword?: string): string | undefined {
+  if (typeof approval == 'string') {
+    return fallbackPassword
+  }
+
+  return approval.password || fallbackPassword
+}
+
+function keyPairStorageKey (identifier: string): string {
+  return `${KEY_PAIR_STORAGE_KEY}_${identifier}`
+}
+
+async function importPublicKey(publicKeyJwk: JWK): Promise<KeyLike> {
+  // @ts-ignore
+  return importJWK(publicKeyJwk, 'ES256').catch(() => {
+    return { type: 'undefined'}
+  })
+}
+
+async function importPrivateKey(privateKeyJwk: JWK): Promise<KeyLike> {
+  // @ts-ignore
+  return importJWK(privateKeyJwk, 'ES256').catch(() => {
+    return { type: 'undefined'}
+  })
+}
+
+async function encryptKeyPair (keyPair: KeyPairParams, password: string): Promise<EncryptedKeyPair> {
+  const jwe = await new CompactEncrypt(encoder.encode(JSON.stringify(keyPair)))
+    .setProtectedHeader({
+      alg: JWE_KEY_MANAGEMENT_ALGORITHM,
+      enc: JWE_CONTENT_ENCRYPTION_ALGORITHM
+    })
+    .encrypt(encoder.encode(password))
+
+  return { jwe }
+}
+
+async function decryptKeyPair (jwe: string, password: string): Promise<KeyPairParams> {
+  const { plaintext } = await compactDecrypt(jwe, encoder.encode(password), {
+    keyManagementAlgorithms: [JWE_KEY_MANAGEMENT_ALGORITHM],
+    contentEncryptionAlgorithms: [JWE_CONTENT_ENCRYPTION_ALGORITHM]
+  })
+
+  return JSON.parse(decoder.decode(plaintext))
 }
 
 class KeyPair {

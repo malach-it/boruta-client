@@ -19,6 +19,12 @@ class EventHandlerMock implements EventHandler {
     if (type == 'access_credential-approval') {
       return callback('password')
     }
+    if (type == 'extract_key-approval') {
+      return callback({ identifier: key, password: 'password' })
+    }
+    if (type == 'generate_key-approval') {
+      return callback({ password: 'password' })
+    }
 
     return callback(key)
   }
