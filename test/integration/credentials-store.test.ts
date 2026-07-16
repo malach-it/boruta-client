@@ -146,5 +146,36 @@ describe('CredentialsStore', () => {
         }
       })).to.eq(true)
     })
+
+    it('matches const filters against nested claim paths', () => {
+      const nestedCredential = new Credential({
+        credentialId: 'nested_credential',
+        format: 'vc+sd-jwt',
+        credential: credentialResponse.credential,
+        claims: [
+          { key: 'test.email', value: 'admin@test.test' }
+        ],
+        disclosures: [],
+        sub: 'did:example:123'
+      })
+
+      expect(nestedCredential.hasClaim({
+        path: ['$.test.email'],
+        filter: {
+          type: 'string',
+          const: 'admin@test.test'
+        }
+      })).to.eq(true)
+    })
+
+    it('matches const filters against any provided path', () => {
+      expect(credential.hasClaim({
+        path: ['$.missing', '$.email'],
+        filter: {
+          type: 'string',
+          const: 'admin@test.test'
+        }
+      })).to.eq(true)
+    })
   })
 })

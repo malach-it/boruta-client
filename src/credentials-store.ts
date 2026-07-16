@@ -305,14 +305,14 @@ export class Credential {
 
   hasClaim (field: InputDescriptorField): boolean {
     const claims = this.claims
-    const pathInfo = field.path[0]?.replace(/^$/, '').split('.')
-
-    const current = pathInfo.pop()
+    const claimKeys = field.path.reduce((keys: Array<string>, path) => {
+      return keys.concat(claimKeysFromPath(path))
+    }, [])
     const claim = claims.find(({ key, value }) => {
-      let isValid = key == current
+      let isValid = !!key && claimKeys.includes(key)
 
       if (field.filter?.type == "array") {
-        if (!(Array.isArray(value) && value.includes(field.filter.contains?.const))) {
+        if (!(Array.isArray(value) && value.some(item => matchesConst(item, field.filter?.contains?.const)))) {
           isValid = false
         }
       } else if (field.filter && 'const' in field.filter) {
@@ -397,6 +397,16 @@ export class Credential {
     })
     return credential
   }
+}
+
+function claimKeysFromPath(path: string): Array<string> {
+  const normalizedPath = path.replace(/^\$\./, '').replace(/^\$/, '')
+  const pathSegments = normalizedPath.split('.').filter(segment => segment.length > 0)
+  const leafKey = pathSegments[pathSegments.length - 1]
+
+  return [normalizedPath, leafKey].filter((key, index, keys): key is string => {
+    return !!key && keys.indexOf(key) == index
+  })
 }
 
 function matchesConst(value: unknown, expected: unknown): boolean {

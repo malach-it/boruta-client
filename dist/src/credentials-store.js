@@ -219,15 +219,15 @@ export class Credential {
         this.sub = sub;
     }
     hasClaim(field) {
-        var _a;
         const claims = this.claims;
-        const pathInfo = (_a = field.path[0]) === null || _a === void 0 ? void 0 : _a.replace(/^$/, '').split('.');
-        const current = pathInfo.pop();
+        const claimKeys = field.path.reduce((keys, path) => {
+            return keys.concat(claimKeysFromPath(path));
+        }, []);
         const claim = claims.find(({ key, value }) => {
-            var _a, _b;
-            let isValid = key == current;
+            var _a;
+            let isValid = !!key && claimKeys.includes(key);
             if (((_a = field.filter) === null || _a === void 0 ? void 0 : _a.type) == "array") {
-                if (!(Array.isArray(value) && value.includes((_b = field.filter.contains) === null || _b === void 0 ? void 0 : _b.const))) {
+                if (!(Array.isArray(value) && value.some(item => { var _a, _b; return matchesConst(item, (_b = (_a = field.filter) === null || _a === void 0 ? void 0 : _a.contains) === null || _b === void 0 ? void 0 : _b.const); }))) {
                     isValid = false;
                 }
             }
@@ -308,6 +308,14 @@ export class Credential {
             return credential;
         });
     }
+}
+function claimKeysFromPath(path) {
+    const normalizedPath = path.replace(/^\$\./, '').replace(/^\$/, '');
+    const pathSegments = normalizedPath.split('.').filter(segment => segment.length > 0);
+    const leafKey = pathSegments[pathSegments.length - 1];
+    return [normalizedPath, leafKey].filter((key, index, keys) => {
+        return !!key && keys.indexOf(key) == index;
+    });
 }
 function matchesConst(value, expected) {
     if (Object(value) === value || Object(expected) === expected) {
