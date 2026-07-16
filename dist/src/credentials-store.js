@@ -224,12 +224,15 @@ export class Credential {
         const pathInfo = (_a = field.path[0]) === null || _a === void 0 ? void 0 : _a.replace(/^$/, '').split('.');
         const current = pathInfo.pop();
         const claim = claims.find(({ key, value }) => {
-            var _a;
+            var _a, _b;
             let isValid = key == current;
             if (((_a = field.filter) === null || _a === void 0 ? void 0 : _a.type) == "array") {
-                if (!(Array.isArray(value) && value.includes(field.filter.contains.const))) {
+                if (!(Array.isArray(value) && value.includes((_b = field.filter.contains) === null || _b === void 0 ? void 0 : _b.const))) {
                     isValid = false;
                 }
+            }
+            else if (field.filter && 'const' in field.filter) {
+                isValid = isValid && matchesConst(value, field.filter.const);
             }
             return isValid;
         });
@@ -305,4 +308,10 @@ export class Credential {
             return credential;
         });
     }
+}
+function matchesConst(value, expected) {
+    if (Object(value) === value || Object(expected) === expected) {
+        return JSON.stringify(value) === JSON.stringify(expected);
+    }
+    return value === expected;
 }

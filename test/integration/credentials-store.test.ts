@@ -2,7 +2,7 @@ import "mocha"
 import chai from 'chai'
 const { expect } = chai
 import chaiAsPromised from 'chai-as-promised'
-import { CredentialsStore } from '../../src/credentials-store'
+import { Credential, CredentialsStore } from '../../src/credentials-store'
 import { EventHandler, StoreEventType } from '../../src/event-handler'
 import { Storage } from '../../src/storage'
 import { CREDENTIALS_KEY } from '../../src/constants'
@@ -99,6 +99,52 @@ describe('CredentialsStore', () => {
       eventHandler.password = 'wrong-password'
 
       await expect(store.credentials()).to.be.rejected
+    })
+  })
+
+  describe('Credential#hasClaim', () => {
+    const credential = new Credential({
+      credentialId: 'test_credential',
+      format: 'jwt_vc',
+      credential: credentialResponse.credential,
+      claims: [
+        { key: 'email', value: 'admin@test.test' },
+        { key: 'type', value: ['VerifiableCredential', 'EmployeeCredential'] }
+      ],
+      disclosures: [],
+      sub: 'did:example:123'
+    })
+
+    it('matches scalar const filters', () => {
+      expect(credential.hasClaim({
+        path: ['$.email'],
+        filter: {
+          type: 'string',
+          const: 'admin@test.test'
+        }
+      })).to.eq(true)
+    })
+
+    it('rejects scalar const filters with a different value', () => {
+      expect(credential.hasClaim({
+        path: ['$.email'],
+        filter: {
+          type: 'string',
+          const: 'user@test.test'
+        }
+      })).to.eq(false)
+    })
+
+    it('keeps matching array contains const filters', () => {
+      expect(credential.hasClaim({
+        path: ['$.type'],
+        filter: {
+          type: 'array',
+          contains: {
+            const: 'EmployeeCredential'
+          }
+        }
+      })).to.eq(true)
     })
   })
 })

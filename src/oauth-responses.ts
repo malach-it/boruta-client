@@ -86,6 +86,17 @@ export type InputDescriptor = {
     [format: string]: Object
   }
   constraints: {
-    fields: Array<{ path: Array<string> }>
+    fields: Array<InputDescriptorField>
+  }
+}
+
+export type InputDescriptorField = {
+  path: Array<string>
+  filter?: {
+    type?: string
+    const?: unknown
+    contains?: {
+      const?: unknown
+    }
   }
 }

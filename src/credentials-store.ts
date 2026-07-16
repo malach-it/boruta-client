@@ -1,7 +1,7 @@
 import { CompactEncrypt, compactDecrypt, decodeJwt } from 'jose'
 import { decodeSdJwt } from '@sd-jwt/decode'
 
-import { CredentialSuccess, PresentationDefinition, InputDescriptor } from './oauth-responses'
+import { CredentialSuccess, PresentationDefinition, InputDescriptor, InputDescriptorField } from './oauth-responses'
 import { Storage } from './storage'
 import { EventHandler } from './event-handler'
 import { CREDENTIALS_KEY } from './constants'
@@ -18,14 +18,6 @@ export type PresentationCredentials = {
   presentation_submission: string
 }
 
-type Constraint = {
-  path: Array<string>
-  filter?: {
-    type: "array"
-    contains: { const: string }
-  }
-}
-
 type Descriptor = {
   id: string,
   format: string
@@ -35,7 +27,7 @@ type Descriptor = {
     path: string
   }
   constraints?: {
-    fields: Array<Constraint>
+    fields: Array<InputDescriptorField>
   }
 }
 
@@ -311,7 +303,7 @@ export class Credential {
     this.sub = sub
   }
 
-  hasClaim (field: Constraint): boolean {
+  hasClaim (field: InputDescriptorField): boolean {
     const claims = this.claims
     const pathInfo = field.path[0]?.replace(/^$/, '').split('.')
 
@@ -320,9 +312,11 @@ export class Credential {
       let isValid = key == current
 
       if (field.filter?.type == "array") {
-        if (!(Array.isArray(value) && value.includes(field.filter.contains.const))) {
+        if (!(Array.isArray(value) && value.includes(field.filter.contains?.const))) {
           isValid = false
         }
+      } else if (field.filter && 'const' in field.filter) {
+        isValid = isValid && matchesConst(value, field.filter.const)
       }
 
       return isValid
@@ -403,6 +397,14 @@ export class Credential {
     })
     return credential
   }
+}
+
+function matchesConst(value: unknown, expected: unknown): boolean {
+  if (Object(value) === value || Object(expected) === expected) {
+    return JSON.stringify(value) === JSON.stringify(expected)
+  }
+
+  return value === expected
 }
 
 type JwtVcCredential = {
