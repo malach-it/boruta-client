@@ -102,6 +102,107 @@ describe('CredentialsStore', () => {
     })
   })
 
+  describe('#presentation', () => {
+    it('rejects credentials when any descriptor field const filter does not match', async () => {
+      const storage = new MemoryStorage()
+      const eventHandler = new PasswordEventHandler('password')
+      const store = new CredentialsStore(eventHandler, storage)
+      const credential = new Credential({
+        credentialId: 'test_credential',
+        format: 'jwt_vc',
+        credential: credentialResponse.credential,
+        claims: [
+          { key: 'email', value: 'admin@test.test' },
+          { key: 'role', value: 'admin' }
+        ],
+        disclosures: [],
+        sub: 'did:example:123'
+      })
+
+      store.generateVpToken = async () => 'vp_token'
+
+      const presentation = await store.presentation({
+        id: 'test_definition',
+        input_descriptors: [{
+          format: {
+            jwt_vc: {}
+          },
+          constraints: {
+            fields: [
+              {
+                path: ['$.email'],
+                filter: {
+                  type: 'string',
+                  const: 'admin@test.test'
+                }
+              },
+              {
+                path: ['$.role'],
+                filter: {
+                  type: 'string',
+                  const: 'user'
+                }
+              }
+            ]
+          }
+        }]
+      }, [credential])
+
+      expect(presentation.credentials).to.deep.eq([])
+      expect(JSON.parse(presentation.presentation_submission).descriptor_map).to.deep.eq([])
+    })
+
+    it('keeps credentials when every descriptor field const filter matches', async () => {
+      const storage = new MemoryStorage()
+      const eventHandler = new PasswordEventHandler('password')
+      const store = new CredentialsStore(eventHandler, storage)
+      const credential = new Credential({
+        credentialId: 'test_credential',
+        format: 'jwt_vc',
+        credential: credentialResponse.credential,
+        claims: [
+          { key: 'email', value: 'admin@test.test' },
+          { key: 'role', value: 'admin' }
+        ],
+        disclosures: [],
+        sub: 'did:example:123'
+      })
+
+      store.generateVpToken = async () => 'vp_token'
+
+      const presentation = await store.presentation({
+        id: 'test_definition',
+        input_descriptors: [{
+          format: {
+            jwt_vc: {}
+          },
+          constraints: {
+            fields: [
+              {
+                path: ['$.email'],
+                filter: {
+                  type: 'string',
+                  const: 'admin@test.test'
+                }
+              },
+              {
+                path: ['$.role'],
+                filter: {
+                  type: 'string',
+                  const: 'admin'
+                }
+              }
+            ]
+          }
+        }]
+      }, [credential])
+
+      expect(presentation.credentials).to.have.length(1)
+      expect(presentation.credentials[0].credentialId).to.eq('test_credential')
+      expect(JSON.parse(presentation.presentation_submission).descriptor_map).to.have.length(1)
+    })
+  })
+
   describe('Credential#hasClaim', () => {
     const credential = new Credential({
       credentialId: 'test_credential',

@@ -157,36 +157,23 @@ export class CredentialsStore {
     const presentationParams = input_descriptors.reduce((acc: PresentationParams, descriptor: InputDescriptor) => {
       return credentials.reduce((acc: PresentationParams, credential: Credential) => {
         if (credential.validateFormat(Object.keys(descriptor.format))) {
-          return descriptor.constraints?.fields.map((field) => {
-            if (
-              credential.hasClaim(field)
-            ) {
-              const descriptor = {
-                id: credential.credentialId,
-                path: '$',
-                format: 'jwt_vp',
-                path_nested: {
-                  id: index.toString(),
-                  format: credential.format,
-                  path: `$.verifiableCredential[${index}]`
-                }
-              }
-              index = index + 1
-              return { credential, descriptor }
-            }
-          })
-            .filter((e: { credential: Credential, descriptor: Descriptor } | undefined) => e)
-            .reduce((
-              acc: PresentationParams,
-              current: { credential: Credential, descriptor: Descriptor } | undefined
-            ) => {
-              if (!current) return acc
-              const { credential, descriptor } = current
+          const fields = descriptor.constraints?.fields || []
+          if (fields.length == 0 || !fields.every(field => credential.hasClaim(field))) return acc
 
-              acc.presentationCredentials.push(credential)
-              acc.descriptorMap.push(descriptor)
-              return acc
-            }, acc)
+          const descriptorMap = {
+            id: credential.credentialId,
+            path: '$',
+            format: 'jwt_vp',
+            path_nested: {
+              id: index.toString(),
+              format: credential.format,
+              path: `$.verifiableCredential[${index}]`
+            }
+          }
+          index = index + 1
+          acc.presentationCredentials.push(credential)
+          acc.descriptorMap.push(descriptorMap)
+          return acc
         } else {
           return acc
         }
