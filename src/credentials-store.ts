@@ -220,7 +220,7 @@ type CredentialParams = {
   format: string
   credential: string
   disclosures: Array<Disclosure>
-  claims: Array<{ key: string | undefined, value: string | Object }>
+  claims: Array<CredentialClaim>
   sub: string
 }
 
@@ -230,7 +230,7 @@ type EncryptedCredentialParams = {
 
 type StoredCredentialParams = CredentialParams | EncryptedCredentialParams
 
-type CredentialClaim = { key: string | undefined, value: string | Object }
+type CredentialClaim = { key: string | undefined, value: unknown }
 
 type Disclosure = {
   key: string
@@ -334,9 +334,9 @@ export class Credential {
               encoded: disclosure._encoded as string
             }
           }),
-          claims: formattedCredential.disclosures.map(({ key, value }) => {
+          claims: withIatClaim(formattedCredential.disclosures.map(({ key, value }) => {
             return { key, value: value as string || '' }
-          }),
+          }), formattedCredential.jwt.payload.iat),
           sub: formattedCredential.jwt.payload.sub as string || ''
         }
         return new Credential(params)
@@ -350,10 +350,10 @@ export class Credential {
         format,
         credential,
         disclosures: [],
-        claims: Object.keys(claims.credentialSubject[credentialId]).map(key => {
-          const value: string | Object = claims.credentialSubject[credentialId][key]
+        claims: withIatClaim(Object.keys(claims.credentialSubject[credentialId]).map(key => {
+          const value: unknown = claims.credentialSubject[credentialId][key]
           return { key, value }
-        }).concat([{ key: "type", value: claims.type }]),
+        }).concat([{ key: "type", value: claims.type }]), claims.iat),
         sub: claims.credentialSubject[credentialId].id
       }
       return new Credential(params)
@@ -386,6 +386,12 @@ export class Credential {
   }
 }
 
+function withIatClaim(claims: Array<CredentialClaim>, iat: unknown): Array<CredentialClaim> {
+  if (typeof iat == 'undefined') return claims
+
+  return claims.concat([{ key: 'iat', value: iat }])
+}
+
 function claimKeysFromPath(path: string): Array<string> {
   const normalizedPath = path.replace(/^\$\./, '').replace(/^\$/, '')
   const pathSegments = normalizedPath.split('.').filter(segment => segment.length > 0)
@@ -413,4 +419,5 @@ type JwtVcCredential = {
   }
   type: Array<string>
   id: string
+  iat?: number
 }

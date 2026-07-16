@@ -141,6 +141,10 @@ describe('BorutaOauth', () => {
                   {
                     "key": "foo",
                     "value": "admin@test.test"
+                  },
+                  {
+                    "key": "iat",
+                    "value": 1742579912
                   }
                 ],
                 disclosures: [

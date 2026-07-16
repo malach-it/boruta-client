@@ -251,9 +251,9 @@ export class Credential {
                                 encoded: disclosure._encoded
                             };
                         }),
-                        claims: formattedCredential.disclosures.map(({ key, value }) => {
+                        claims: withIatClaim(formattedCredential.disclosures.map(({ key, value }) => {
                             return { key, value: value || '' };
-                        }),
+                        }), formattedCredential.jwt.payload.iat),
                         sub: formattedCredential.jwt.payload.sub || ''
                     };
                     return new Credential(params);
@@ -267,10 +267,10 @@ export class Credential {
                     format,
                     credential,
                     disclosures: [],
-                    claims: Object.keys(claims.credentialSubject[credentialId]).map(key => {
+                    claims: withIatClaim(Object.keys(claims.credentialSubject[credentialId]).map(key => {
                         const value = claims.credentialSubject[credentialId][key];
                         return { key, value };
-                    }).concat([{ key: "type", value: claims.type }]),
+                    }).concat([{ key: "type", value: claims.type }]), claims.iat),
                     sub: claims.credentialSubject[credentialId].id
                 };
                 return new Credential(params);
@@ -302,6 +302,11 @@ export class Credential {
             return credential;
         });
     }
+}
+function withIatClaim(claims, iat) {
+    if (typeof iat == 'undefined')
+        return claims;
+    return claims.concat([{ key: 'iat', value: iat }]);
 }
 function claimKeysFromPath(path) {
     const normalizedPath = path.replace(/^\$\./, '').replace(/^\$/, '');

@@ -279,4 +279,19 @@ describe('CredentialsStore', () => {
       })).to.eq(true)
     })
   })
+
+  describe('Credential.fromResponse', () => {
+    it('includes iat from jwt_vc credentials claims', async () => {
+      const credential = await Credential.fromResponse('test_credential', {
+        format: 'jwt_vc',
+        credential: [
+          'eyJhbGciOiJub25lIn0',
+          'eyJjcmVkZW50aWFsU3ViamVjdCI6eyJ0ZXN0X2NyZWRlbnRpYWwiOnsiaWQiOiJkaWQ6ZXhhbXBsZToxMjMiLCJlbWFpbCI6ImFkbWluQHRlc3QudGVzdCJ9fSwidHlwZSI6WyJWZXJpZmlhYmxlQ3JlZGVudGlhbCJdLCJpZCI6InRlc3RfY3JlZGVudGlhbCIsImlhdCI6MTIzNDU2Nzg5MH0',
+          ''
+        ].join('.')
+      })
+
+      expect(credential.claims).to.deep.include({ key: 'iat', value: 1234567890 })
+    })
+  })
 })
