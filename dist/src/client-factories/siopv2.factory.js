@@ -21,8 +21,8 @@ export function createSiopv2Client({ oauth, eventHandler, storage }) {
             this.responseType = responseType || 'code';
             this.keyStore = new KeyStore(eventHandler, storage);
         }
-        parseSiopv2Response(location) {
-            return __awaiter(this, void 0, void 0, function* () {
+        parseSiopv2Response(location_1) {
+            return __awaiter(this, arguments, void 0, function* (location, presentation_definition = null) {
                 if (location.search === '') {
                     return Promise.reject(new OauthError({
                         error: 'unkown_error',
@@ -69,8 +69,10 @@ export function createSiopv2Client({ oauth, eventHandler, storage }) {
                     "exp": now + 600,
                     "iat": now,
                     "client_encryption_key": publicKey,
-                    "client_encryption_alg": "ECDH-ES"
+                    "client_encryption_alg": "ECDH-ES",
                 };
+                if (presentation_definition)
+                    payload["presentation_definition"] = presentation_definition;
                 const id_token = yield this.keyStore.sign(payload, client_id);
                 return {
                     id_token,

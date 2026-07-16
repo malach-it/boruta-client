@@ -41,7 +41,7 @@ export function createSiopv2Client({ oauth, eventHandler, storage }: Siopv2Facto
       this.keyStore = new KeyStore(eventHandler, storage)
     }
 
-    async parseSiopv2Response(location: Location): Promise<Siopv2Success> {
+    async parseSiopv2Response(location: Location, presentation_definition: unknown = null): Promise<Siopv2Success> {
       if (location.search === '') {
         return Promise.reject(new OauthError({
           error: 'unkown_error',
@@ -91,14 +91,24 @@ export function createSiopv2Client({ oauth, eventHandler, storage }: Siopv2Facto
 
       const { publicKey } = JSON.parse(localStorage.getItem("encryptionKeyPair") || "{}")
       const now = Math.floor((new Date()) as unknown as number / 1000)
-      const payload = {
+      const payload: {
+        "aud": string
+        "nonce": string
+        "exp": number
+        "iat": number
+        "client_encryption_key": string
+        "client_encryption_alg": string
+        "presentation_definition"?: unknown
+      } = {
         "aud": redirect_uri,
         "nonce": "nonce",
         "exp": now + 600,
         "iat": now,
         "client_encryption_key": publicKey,
-        "client_encryption_alg": "ECDH-ES"
+        "client_encryption_alg": "ECDH-ES",
       }
+
+      if (presentation_definition) payload["presentation_definition"] = presentation_definition
 
       const id_token = await this.keyStore.sign(payload, client_id)
 
