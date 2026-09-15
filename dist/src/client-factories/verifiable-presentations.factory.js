@@ -7,7 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { decodeJwt } from "jose";
+import { jwtVerify, decodeJwt, importJWK } from "jose";
 import { OauthError } from "../oauth-responses";
 import { KeyStore } from '../key-store';
 import { CredentialsStore } from '../credentials-store';
@@ -38,7 +38,38 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
                         error_description: 'Presentation success.'
                     }));
                 }
+                if (!oauth.jwksPath) {
+                    return Promise.reject(new OauthError({
+                        error: 'unkown_error',
+                        error_description: 'You must provide server jwks path.'
+                    }));
+                }
                 const { request, presentation_definition, client_id, redirect_uri, response_mode, response_type, } = parsedPresentation;
+                let nonce;
+                yield oauth.api.get(oauth.jwksPath).then((_a) => __awaiter(this, [_a], void 0, function* ({ data }) {
+                    const keys = data.keys;
+                    let found = false;
+                    while (keys.length) {
+                        const key = keys.pop();
+                        if (!key) {
+                            throw new OauthError({
+                                error: 'unknown_error',
+                                error_description: 'Request signature could not be verified.'
+                            });
+                        }
+                        try {
+                            const { payload } = yield jwtVerify(request, yield importJWK(key));
+                            nonce = payload.nonce;
+                            found = true;
+                        }
+                        catch (_error) { }
+                    }
+                    if (!found)
+                        throw new OauthError({
+                            error: 'invalid_issuer',
+                            error_description: 'could not verify request signature',
+                        });
+                }));
                 return {
                     id: presentation_definition.id,
                     presentation_definition,
@@ -47,14 +78,14 @@ export function createVerifiablePresentationsClient({ oauth, eventHandler, stora
                     redirect_uri,
                     response_mode,
                     response_type,
+                    nonce,
                 };
             });
         }
         generatePresentation(_a, credentials_1) {
-            return __awaiter(this, arguments, void 0, function* ({ request, redirect_uri }, credentials) {
-                const url = new URL(redirect_uri);
+            return __awaiter(this, arguments, void 0, function* ({ request, redirect_uri, nonce }, credentials) {
                 const { presentation_definition } = yield parseVerifiablePresentationRequest(request);
-                const presentation = yield this.credentialsStore.presentation(presentation_definition, credentials);
+                const presentation = yield this.credentialsStore.presentation(presentation_definition, credentials, nonce);
                 return Object.assign({ redirect_uri }, presentation);
             });
         }

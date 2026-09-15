@@ -75,6 +75,7 @@ export interface VerifiablePresentationSuccess {
   redirect_uri: string
   response_mode?: string
   response_type: string
+  nonce?: string
 }
 
 export type PresentationDefinition = {

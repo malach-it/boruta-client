@@ -148,7 +148,7 @@ export class CredentialsStore {
     })
   }
 
-  async presentation({ id, input_descriptors }: PresentationDefinition, credentials?: Array<Credential>): Promise<PresentationCredentials> {
+  async presentation({ id, input_descriptors }: PresentationDefinition, credentials?: Array<Credential>, nonce?: string): Promise<PresentationCredentials> {
     if (!credentials) {
       credentials = await this.credentials()
     }
@@ -188,12 +188,12 @@ export class CredentialsStore {
 
     return {
       credentials: presentationParams.presentationCredentials,
-      vp_token: await this.generateVpToken(presentationParams, id),
+      vp_token: await this.generateVpToken(presentationParams, nonce, id),
       presentation_submission: await this.generatePresentationSubmission(presentationParams, 'presentation_submission~' + id)
     }
   }
 
-  async generateVpToken({ presentationCredentials }: PresentationParams, eventKey: string): Promise<string> {
+  async generateVpToken({ presentationCredentials }: PresentationParams, nonce: string | undefined, eventKey: string): Promise<string> {
     const payload = {
       'id': eventKey,
       '@context': [
@@ -202,7 +202,8 @@ export class CredentialsStore {
       'type': [
         'VerifiablePresentation'
       ],
-      'verifiableCredential': presentationCredentials.map(({ credential }) => credential)
+      'verifiableCredential': presentationCredentials.map(({ credential }) => credential),
+      'nonce': nonce
     }
     return this.keyStore.sign(payload, eventKey)
   }

@@ -109,8 +109,8 @@ export class CredentialsStore {
             });
         });
     }
-    presentation(_a, credentials_1) {
-        return __awaiter(this, arguments, void 0, function* ({ id, input_descriptors }, credentials) {
+    presentation(_a, credentials_1, nonce_1) {
+        return __awaiter(this, arguments, void 0, function* ({ id, input_descriptors }, credentials, nonce) {
             if (!credentials) {
                 credentials = yield this.credentials();
             }
@@ -147,13 +147,13 @@ export class CredentialsStore {
                 .map(credential => credential.disclosedCredential(input_descriptors)));
             return {
                 credentials: presentationParams.presentationCredentials,
-                vp_token: yield this.generateVpToken(presentationParams, id),
+                vp_token: yield this.generateVpToken(presentationParams, nonce, id),
                 presentation_submission: yield this.generatePresentationSubmission(presentationParams, 'presentation_submission~' + id)
             };
         });
     }
-    generateVpToken(_a, eventKey_1) {
-        return __awaiter(this, arguments, void 0, function* ({ presentationCredentials }, eventKey) {
+    generateVpToken(_a, nonce_1, eventKey_1) {
+        return __awaiter(this, arguments, void 0, function* ({ presentationCredentials }, nonce, eventKey) {
             const payload = {
                 'id': eventKey,
                 '@context': [
@@ -162,7 +162,8 @@ export class CredentialsStore {
                 'type': [
                     'VerifiablePresentation'
                 ],
-                'verifiableCredential': presentationCredentials.map(({ credential }) => credential)
+                'verifiableCredential': presentationCredentials.map(({ credential }) => credential),
+                'nonce': nonce
             };
             return this.keyStore.sign(payload, eventKey);
         });
