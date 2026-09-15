@@ -37,6 +37,7 @@ export function createSiopv2Client({ oauth, eventHandler, storage }) {
                         error_description: 'You must provide server jwks path.'
                     }));
                 }
+                let nonce;
                 yield oauth.api.get(oauth.jwksPath).then((_a) => __awaiter(this, [_a], void 0, function* ({ data }) {
                     const keys = data.keys;
                     let found = false;
@@ -49,8 +50,8 @@ export function createSiopv2Client({ oauth, eventHandler, storage }) {
                             });
                         }
                         try {
-                            const jwt = yield jwtVerify(request, yield importJWK(key));
-                            console.log(jwt);
+                            const { payload } = yield jwtVerify(request, yield importJWK(key));
+                            nonce = payload.nonce;
                             found = true;
                         }
                         catch (_error) { }
@@ -65,7 +66,7 @@ export function createSiopv2Client({ oauth, eventHandler, storage }) {
                 const now = Math.floor((new Date()) / 1000);
                 const payload = {
                     "aud": redirect_uri,
-                    "nonce": "nonce",
+                    "nonce": nonce || "nonce",
                     "exp": now + 600,
                     "iat": now,
                     "client_encryption_key": publicKey,

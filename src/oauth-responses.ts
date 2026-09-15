@@ -64,6 +64,7 @@ export interface Siopv2Success {
   request: string
   response_mode: string
   response_type: string
+  nonce?: string
   scope?: string
 }
 

@@ -66,6 +66,7 @@ export function createSiopv2Client({ oauth, eventHandler, storage }: Siopv2Facto
         }))
       }
 
+      let nonce
       await oauth.api.get(oauth.jwksPath).then(async ({ data }) => {
         const keys = data.keys
         let found = false
@@ -78,8 +79,8 @@ export function createSiopv2Client({ oauth, eventHandler, storage }: Siopv2Facto
             })
           }
           try {
-            const jwt = await jwtVerify(request, await importJWK(key))
-            console.log(jwt)
+            const { payload } = await jwtVerify(request, await importJWK(key))
+            nonce = payload.nonce
             found = true
           } catch (_error) {}
         }
@@ -101,7 +102,7 @@ export function createSiopv2Client({ oauth, eventHandler, storage }: Siopv2Facto
         "presentation_definition"?: unknown
       } = {
         "aud": redirect_uri,
-        "nonce": "nonce",
+        "nonce": nonce || "nonce",
         "exp": now + 600,
         "iat": now,
         "client_encryption_key": publicKey,
