@@ -204,11 +204,11 @@ describe('CredentialsStore', () => {
   })
 
   describe('#generateVpToken', () => {
-    it('includes issued-at and expiration claims', async () => {
+    it('includes audience, issued-at and expiration claims', async () => {
       const storage = new MemoryStorage()
       const eventHandler = new PasswordEventHandler('password')
       const store = new CredentialsStore(eventHandler, storage)
-      let signedPayload: { iat?: number, exp?: number } = {}
+      let signedPayload: { aud?: string, iat?: number, exp?: number } = {}
       let signedEventKey: string | undefined
 
       store.keyStore.sign = async (payload, eventKey) => {
@@ -221,11 +221,12 @@ describe('CredentialsStore', () => {
       const token = await store.generateVpToken({
         presentationCredentials: [],
         descriptorMap: []
-      }, 'nonce', 'test_definition')
+      }, 'nonce', 'test_definition', 'https://verifier.example')
       const after = Math.floor(Date.now() / 1000)
 
       expect(token).to.eq('vp_token')
       expect(signedEventKey).to.eq('test_definition')
+      expect(signedPayload.aud).to.eq('https://verifier.example')
       expect(signedPayload.iat).to.be.within(before, after)
       expect(signedPayload.exp).to.eq((signedPayload.iat as number) + 600)
     })

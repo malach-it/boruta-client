@@ -109,8 +109,8 @@ export class CredentialsStore {
             });
         });
     }
-    presentation(_a, credentials_1, nonce_1) {
-        return __awaiter(this, arguments, void 0, function* ({ id, input_descriptors }, credentials, nonce) {
+    presentation(_a, credentials_1, nonce_1, audience_1) {
+        return __awaiter(this, arguments, void 0, function* ({ id, input_descriptors }, credentials, nonce, audience) {
             if (!credentials) {
                 credentials = yield this.credentials();
             }
@@ -147,13 +147,13 @@ export class CredentialsStore {
                 .map(credential => credential.disclosedCredential(input_descriptors)));
             return {
                 credentials: presentationParams.presentationCredentials,
-                vp_token: yield this.generateVpToken(presentationParams, nonce, id),
+                vp_token: yield this.generateVpToken(presentationParams, nonce, id, audience),
                 presentation_submission: yield this.generatePresentationSubmission(presentationParams, 'presentation_submission~' + id)
             };
         });
     }
-    generateVpToken(_a, nonce_1, eventKey_1) {
-        return __awaiter(this, arguments, void 0, function* ({ presentationCredentials }, nonce, eventKey) {
+    generateVpToken(_a, nonce_1, eventKey_1, audience_1) {
+        return __awaiter(this, arguments, void 0, function* ({ presentationCredentials }, nonce, eventKey, audience) {
             const now = Math.floor(Date.now() / 1000);
             const payload = {
                 'id': eventKey,
@@ -165,6 +165,7 @@ export class CredentialsStore {
                 ],
                 'verifiableCredential': presentationCredentials.map(({ credential }) => credential),
                 'nonce': nonce,
+                'aud': audience,
                 'iat': now,
                 'exp': now + 600
             };

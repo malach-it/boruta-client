@@ -101,7 +101,9 @@ export function createSiopv2Client({ oauth, eventHandler, storage }: Siopv2Facto
         "client_encryption_alg": string
         "presentation_definition"?: unknown
       } = {
-        "aud": redirect_uri,
+        // The ID Token is intended for the OAuth client, so bind it to the
+        // client identifier from the authorization response parameters.
+        "aud": client_id,
         "nonce": nonce || "nonce",
         "exp": now + 600,
         "iat": now,

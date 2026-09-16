@@ -65,7 +65,9 @@ export function createSiopv2Client({ oauth, eventHandler, storage }) {
                 const { publicKey } = JSON.parse(localStorage.getItem("encryptionKeyPair") || "{}");
                 const now = Math.floor((new Date()) / 1000);
                 const payload = {
-                    "aud": redirect_uri,
+                    // The ID Token is intended for the OAuth client, so bind it to the
+                    // client identifier from the authorization response parameters.
+                    "aud": client_id,
                     "nonce": nonce || "nonce",
                     "exp": now + 600,
                     "iat": now,
