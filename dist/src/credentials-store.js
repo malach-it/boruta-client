@@ -154,6 +154,7 @@ export class CredentialsStore {
     }
     generateVpToken(_a, nonce_1, eventKey_1) {
         return __awaiter(this, arguments, void 0, function* ({ presentationCredentials }, nonce, eventKey) {
+            const now = Math.floor(Date.now() / 1000);
             const payload = {
                 'id': eventKey,
                 '@context': [
@@ -163,7 +164,9 @@ export class CredentialsStore {
                     'VerifiablePresentation'
                 ],
                 'verifiableCredential': presentationCredentials.map(({ credential }) => credential),
-                'nonce': nonce
+                'nonce': nonce,
+                'iat': now,
+                'exp': now + 600
             };
             return this.keyStore.sign(payload, eventKey);
         });

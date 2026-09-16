@@ -194,6 +194,7 @@ export class CredentialsStore {
   }
 
   async generateVpToken({ presentationCredentials }: PresentationParams, nonce: string | undefined, eventKey: string): Promise<string> {
+    const now = Math.floor(Date.now() / 1000)
     const payload = {
       'id': eventKey,
       '@context': [
@@ -203,7 +204,9 @@ export class CredentialsStore {
         'VerifiablePresentation'
       ],
       'verifiableCredential': presentationCredentials.map(({ credential }) => credential),
-      'nonce': nonce
+      'nonce': nonce,
+      'iat': now,
+      'exp': now + 600
     }
     return this.keyStore.sign(payload, eventKey)
   }

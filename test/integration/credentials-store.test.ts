@@ -203,6 +203,34 @@ describe('CredentialsStore', () => {
     })
   })
 
+  describe('#generateVpToken', () => {
+    it('includes issued-at and expiration claims', async () => {
+      const storage = new MemoryStorage()
+      const eventHandler = new PasswordEventHandler('password')
+      const store = new CredentialsStore(eventHandler, storage)
+      let signedPayload: { iat?: number, exp?: number } = {}
+      let signedEventKey: string | undefined
+
+      store.keyStore.sign = async (payload, eventKey) => {
+        signedPayload = payload
+        signedEventKey = eventKey
+        return 'vp_token'
+      }
+
+      const before = Math.floor(Date.now() / 1000)
+      const token = await store.generateVpToken({
+        presentationCredentials: [],
+        descriptorMap: []
+      }, 'nonce', 'test_definition')
+      const after = Math.floor(Date.now() / 1000)
+
+      expect(token).to.eq('vp_token')
+      expect(signedEventKey).to.eq('test_definition')
+      expect(signedPayload.iat).to.be.within(before, after)
+      expect(signedPayload.exp).to.eq((signedPayload.iat as number) + 600)
+    })
+  })
+
   describe('Credential#hasClaim', () => {
     const credential = new Credential({
       credentialId: 'test_credential',
