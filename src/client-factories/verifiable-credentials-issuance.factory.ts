@@ -85,10 +85,11 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
       })
     }
 
-    async getCredentialParams (credentialIdentifier: string, format: string) {
+    async getCredentialParams (credentialIdentifier: string, format: string, c_nonce?: string) {
       const payload = {
         iat: (Date.now() / 1000),
-        aud: this.oauth.host
+        aud: this.oauth.host,
+        nonce: c_nonce,
       }
 
       const proofJwt = await this.keyStore.sign(payload, credentialIdentifier)
@@ -107,9 +108,10 @@ export function createVerifiableCredentialsIssuanceClient({ oauth, eventHandler,
 
     async getCredential ({
       access_token: accessToken,
+      c_nonce,
     }: TokenSuccess, credentialIdentifier: string, format: string) {
       const { oauth: { api, credentialPath = '' } } = this
-      const body = await this.getCredentialParams(credentialIdentifier, format)
+      const body = await this.getCredentialParams(credentialIdentifier, format, c_nonce)
 
       return api.post<CredentialSuccess>(credentialPath, body, {
         headers: {

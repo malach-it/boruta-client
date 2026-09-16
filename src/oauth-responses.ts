@@ -50,6 +50,8 @@ export interface TokenSuccess {
   refresh_token?: string
   state?: string
   authorization_details?: object
+  c_nonce?: string
+  c_nonce_expires_in?: number
 }
 
 export interface CredentialSuccess {
